@@ -12,11 +12,15 @@ class Client():
         self.txBuffer = None
         self.type = None
         self.quantStuff = None
-        self.sobra = None
         self.qPck = None
         self.head = None
+        self.txLenStuff = None
+        self.byteEoP = byteEoP = bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
 
-        
+    
+    def getqPack(self):
+        return int.from_bytes(self.qPck, byteorder='little')
+
     def GetFileAndSize(self):
 
         filename = filedialog.askopenfilename(initialdir = "/home/borg/Imagens/.",title="ESCOLHA UM ARQUIVO!", filetypes=(("imagens","*.jpg *.jpeg *.png"),("allfiles","*.*")))
@@ -52,22 +56,17 @@ class Client():
             
         quantStuff = self.quantStuff.to_bytes(1, byteorder='little')
 
-        resposta = bytes({0x00})
+        resposta_EoP = bytes({0x00})
 
-        resp1 = bytes({0x00})
+        respPayload = bytes({0x00})
         
-        head = img_size + img_typ + quantStuff + bytes({0x00}) + resp1 + resposta
+        head = img_size + img_typ + quantStuff + respPayload + resposta_EoP
 
         self.head = head
 
-        return head
-    
-
     def fatiamento(self):
 
-        byteEoP = bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
-
-        payload = self.txBuffer
+        payload = bytearray(self.txBuffer)
 
         stuffedIdx = []
 
@@ -75,7 +74,7 @@ class Client():
         
         while a < self.txLen:
 
-            if payload[a] == byteEoP[0] and payload[a+1] == byteEoP[1] and payload[a+2] == byteEoP[2] and payload[a+3] == byteEoP[3]:
+            if payload[a] == self.byteEoP[0] and payload[a+1] == self.byteEoP[1] and payload[a+2] == self.byteEoP[2] and payload[a+3] == self.byteEoP[3]:
 
                 payload[a:a]     = bytes({0x00})
                 payload[a+1:a+1] = bytes({0x00})
@@ -85,57 +84,71 @@ class Client():
                 stuffedIdx.append(a)
 
             a += 1
+        
+        self.quantStuff = len(stuffedIdx)
+        
+        self.txLenStuff = len(payload)
+
+        print(len(payload))
+
+        self.makeHeader()
             
-        s, qt = self.fatia()
+        qt = self.fatia()
 
         b = 0
         p = qt
 
-        while b < payload:
+        packs = []
 
-            payload[b:b] = qt.to_bytes(2, byteorder='little') + (qt-p).to_bytes(2, byteorder='little')
+        while b < len(payload):
+
+            payload[b:b] = self.qPck 
+            b+=2
+
+            payload[b:b] = (qt-p).to_bytes(2, byteorder='little')
             p -= 1
-            b += 4
+            b += 2
 
             payload[b:b] = self.head
             b += 136
 
             payload[b:b] = bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
             b += 4
+
+            packs.append(payload[b-144: b])
         
-        payload = payload + bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
+        packs[-1] = packs[-1] + self.byteEoP
 
-        self.quantStuff = len(stuffedIdx)
-
-        send = payload + byteEoP
-
-        return send
+        return packs
 
     def fatia(self):
 
-        tamanho_do_payload = self.txLen
+        tamanho_do_payload = self.txLenStuff
+
+        print(tamanho_do_payload)
 
         sobra = tamanho_do_payload%128
 
-        qPack = (tamanho_do_payload - sobra)/128
+        a = tamanho_do_payload - sobra
 
-        self.sobra = sobra.to_bytes(2, byteorder='little')
+        qPack = int(a/128)
+
+        print(sobra)
+        print(qPack)
 
         self.qPck = (qPack + 1).to_bytes(2, byteorder='little')
 
-        return sobra, qPack
+        return qPack
 
 
     def Organize(self):
 
-        head = self.makeHeader()
-
-        send = self.fatiamento()
+        pack_list = self.fatiamento()
 
         # Transmite dado
         print("tentado transmitir .... {} bytes".format(self.txLen))
 
-        return send
+        return pack_list
 
 
     def Time(self,rxLen,END,STR):
@@ -154,7 +167,7 @@ class Client():
 # Num de Pacotes (2 bytes) + Pacote atual + Tamanho da imagem (4 bytes) + extenção da imagem (1 byte) + Quantidade de stuffeds q forem feitos (1 byte) + checagem do tamanho (1 byte) + resposta (1 byte)
 
 # RESPOSTA:
-# 0XFF = tudo OK
+# 0x02 = tudo OK
 
 # DICIONARIO DE EXTENÇÃO:
 # .png = bytes({0x00})
