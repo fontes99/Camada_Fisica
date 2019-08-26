@@ -100,7 +100,7 @@ class Client():
 
         packs = []
 
-        while b < len(payload):
+        while b <= len(payload):
 
             payload[b:b] = self.qPck 
             b+=2
@@ -117,6 +117,8 @@ class Client():
 
             packs.append(payload[b-144: b])
         
+        packs.append(payload[b:])
+
         packs[-1] = packs[-1] + self.byteEoP
 
         return packs
