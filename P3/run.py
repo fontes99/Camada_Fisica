@@ -61,7 +61,7 @@ if typ == "0":
 
     t0 = time.time()
 
-    while a < qPck:
+    while a <= qPck:
 
         # Envio pack por pack
         com.sendData(send_list[a])
@@ -80,7 +80,7 @@ if typ == "0":
         
 
         #Recebe Resposta  
-        rxHead = com.rx.getNData(8)
+        rxHead = com.rx.getNData(12)
 
         rxLen = int.from_bytes(rxHead[0:4], byteorder='little')
 
