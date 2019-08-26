@@ -114,8 +114,10 @@ if typ == "0":
         elif erroEoP == 2:
             print("---------------------------------------------")
             print("Nenhum erro encontrado no EoP")
+        
 
-        a += 1
+        if erroEoP == 2 and compTamanho == 1:
+            a += 1
 
     t1 = time.time()
 
