@@ -12,6 +12,9 @@ class Client():
         self.txBuffer = None
         self.type = None
         self.quantStuff = None
+        self.sobra = None
+        self.qPck = None
+        self.head = None
 
         
     def GetFileAndSize(self):
@@ -50,13 +53,17 @@ class Client():
         quantStuff = self.quantStuff.to_bytes(1, byteorder='little')
 
         resposta = bytes({0x00})
+
+        resp1 = bytes({0x00})
         
-        head = img_size + img_typ + quantStuff + bytes({0x00}) + resposta
+        head = img_size + img_typ + quantStuff + bytes({0x00}) + resp1 + resposta
+
+        self.head = head
 
         return head
     
 
-    def attEoP(self):
+    def fatiamento(self):
 
         byteEoP = bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
 
@@ -78,19 +85,52 @@ class Client():
                 stuffedIdx.append(a)
 
             a += 1
+            
+        s, qt = self.fatia()
+
+        b = 0
+        p = qt
+
+        while b < payload:
+
+            payload[b:b] = qt.to_bytes(2, byteorder='little') + (qt-p).to_bytes(2, byteorder='little')
+            p -= 1
+            b += 4
+
+            payload[b:b] = self.head
+            b += 136
+
+            payload[b:b] = bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
+            b += 4
         
+        payload = payload + bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
+
         self.quantStuff = len(stuffedIdx)
 
         send = payload + byteEoP
 
         return send
 
+    def fatia(self):
+
+        tamanho_do_payload = self.txLen
+
+        sobra = tamanho_do_payload%128
+
+        qPack = (tamanho_do_payload - sobra)/128
+
+        self.sobra = sobra.to_bytes(2, byteorder='little')
+
+        self.qPck = (qPack + 1).to_bytes(2, byteorder='little')
+
+        return sobra, qPack
+
 
     def Organize(self):
 
-        EoP = self.attEoP()
+        head = self.makeHeader()
 
-        send = self.makeHeader() + EoP
+        send = self.fatiamento()
 
         # Transmite dado
         print("tentado transmitir .... {} bytes".format(self.txLen))
@@ -111,7 +151,7 @@ class Client():
 #========================#=======================#=========================
 
 # PROTOCOLO HEADER:
-# Tamanho da imagem (4 bytes) + extenção da imagem (1 byte) + Quantidade de stuffeds q forem feitos (1 byte) + checagem do tamanho (1 byte) + resposta (1 byte)
+# Num de Pacotes (2 bytes) + Pacote atual + Tamanho da imagem (4 bytes) + extenção da imagem (1 byte) + Quantidade de stuffeds q forem feitos (1 byte) + checagem do tamanho (1 byte) + resposta (1 byte)
 
 # RESPOSTA:
 # 0XFF = tudo OK
