@@ -51,59 +51,73 @@ if typ == "0":
     txBuffer, txLen, fileType = client.GetFileAndSize()
 
     # Organiza o arquivo para envio
-    send = client.Organize()
+    send_list = client.Organize()
+
+    qPck = client.getqPack()
+
+    print(len(send_list) == qPck)
+
+    a = 0
 
     t0 = time.time()
-    # Envio
-    com.sendData(send)
 
-    # Atualiza dados da transmissão
-    txSize = com.tx.getStatus()
-    print ("Transmitido       {} bytes ".format(txSize))
+    while a < qPck:
 
-    #========================================#
-    #                Resposta                #
-    #========================================#
+        # Envio pack por pack
+        com.sendData(send_list[a])
 
-    # Espera as infos
-    while(com.tx.getIsBussy()):
-        pass
+        # Atualiza dados da transmissão
+        txSize = com.tx.getStatus()
+        print ("Transmitido {}/{} packs".format(a, qPck))
+
+        #========================================#
+        #                Resposta                #
+        #========================================#
+
+        # Espera as infos
+        while(com.tx.getIsBussy()):
+            pass
+        
+
+        #Recebe Resposta  
+        rxHead = com.rx.getNData(8)
+
+        rxLen = int.from_bytes(rxHead[0:4], byteorder='little')
+
+        compTamanho = rxHead[-2]
+
+        erroEoP = rxHead[-1]
+
+        print("*********************************************")
+        print('            PACOTE {} DE {}                '.format(a, qPck))
+        print("*********************************************")
+
+        if compTamanho == 0:
+            print("---------------------------------------------")
+            print("[ERRO] Tamanho recebido diferente do enviado")
+
+        elif compTamanho == 1:
+            print("---------------------------------------------")
+            print("Nenhum erro encontrado no payload")
+
+
+        if erroEoP == 0:
+            print("---------------------------------------------")
+            print("EOP não Encontrado...")
+            print("---------------------------------------------")
+        
+        elif erroEoP == 1:
+            print("---------------------------------------------")
+            print("EOP encontrado em um local errado...")
+            print("---------------------------------------------")
+            
+        elif erroEoP == 2:
+            print("---------------------------------------------")
+            print("Nenhum erro encontrado no EoP")
+
+        a += 1
 
     t1 = time.time()
-
-    #Recebe Resposta  
-    rxHead = com.rx.getNData(8)
-
-    rxLen = int.from_bytes(rxHead[0:4], byteorder='little')
-
-    compTamanho = rxHead[-2]
-
-    erroEoP = rxHead[-1]
-
-
-    if compTamanho == 0:
-        print("---------------------------------------------")
-        print("[ERRO] Tamanho recebido diferente do enviado")
-
-    elif compTamanho == 1:
-        print("---------------------------------------------")
-        print("Nenhum erro encontrado no tamanho da IMG")
-
-
-    if erroEoP == 0:
-        print("---------------------------------------------")
-        print("EOP não Encontrado...")
-        print("---------------------------------------------")
-    
-    elif erroEoP == 1:
-        print("---------------------------------------------")
-        print("EOP encontrado em um local errado...")
-        print("---------------------------------------------")
-        
-    elif erroEoP == 2:
-        print("---------------------------------------------")
-        print("Nenhum erro encontrado no EoP")
-
 
     #Printa a Eficiencia
     print("---------------------------------------------")
