@@ -173,12 +173,11 @@ elif typ == "1":
             resposta_EOP = com.rx.getNData(1)
 
         print("Quant Total: ", int.from_bytes(QPackTotal,byteorder="little"))
-        print("Quant Atual: ", int.from_bytes(QPackAtual,byteorder="little"))
+        print("Quant Atual: ", int.from_bytes(QPackAtual,byteorder="little")+1)
     
         ##############################################
         #  Pega as informações conhecendo o tamanho! #
         ##############################################
-        print(QPackAtualINT,"....",QPackTotalINT)
 
         if QPackAtualINT==QPackTotalINT-1:
             tamanhoPack = int.from_bytes(tamanho,byteorder="little")%128
@@ -206,7 +205,7 @@ elif typ == "1":
         else:
             resposta_tamanho = bytes({0x01})
         print()
-        head = QPackTotal+QPackAtual+envio+tip+stuffedQuant+resposta_tamanho+resposta_EOP
+        head = QPackTotal+QPackAtual+envio+tip+stuffedQuant+resposta_tamanho+resposta_EOP+EOP
 
         ##################
         #    RESPOSTA    #
@@ -228,6 +227,7 @@ elif typ == "1":
 
     tipo = server.fileType(tip)
     print(tipo)
+    print(len(image))
 
     #####################
     #  Salva o Arquivo  #
