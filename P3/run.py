@@ -55,20 +55,23 @@ if typ == "0":
 
     qPck = client.getqPack()
 
-    print(len(send_list) == qPck)
+    print('\n Comprimento real da lista: ', len(send_list))
+
+    print('\n Quant de packs: ', qPck, '\n')
 
     a = 0
 
     t0 = time.time()
 
-    while a <= qPck:
+    while a < qPck:
 
         # Envio pack por pack
         com.sendData(send_list[a])
+        print(send_list[a])
 
         # Atualiza dados da transmissão
         txSize = com.tx.getStatus()
-        print ("Transmitido {}/{} packs".format(a, qPck))
+        print ("Transmitido {}/{} packs".format(a+1, qPck))
 
         #========================================#
         #                Resposta                #
@@ -89,7 +92,7 @@ if typ == "0":
         erroEoP = rxHead[-1]
 
         print("*********************************************")
-        print('            PACOTE {} DE {}                '.format(a, qPck))
+        print('            PACOTE {} DE {}                '.format(a+1, qPck))
         print("*********************************************")
 
         if compTamanho == 0:
@@ -118,6 +121,8 @@ if typ == "0":
 
         if erroEoP == 2 and compTamanho == 1:
             a += 1
+        
+        print("\n ----- CONCLUIDO ----- \n")
 
     t1 = time.time()
 
@@ -133,6 +138,7 @@ if typ == "0":
     # Encerra comunicação
     print("---------------------------------------------")
     print("            Comunicação encerrada              ")
+    # print(clien)
     print("---------------------------------------------")
     com.disable()
 

@@ -15,7 +15,7 @@ class Client():
         self.qPck = None
         self.head = None
         self.txLenStuff = None
-        self.byteEoP = byteEoP = bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
+        self.byteEoP = bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
 
     
     def getqPack(self):
@@ -72,7 +72,7 @@ class Client():
 
         a = 0
         
-        while a < self.txLen:
+        while a <= (self.txLen - 3):
 
             if payload[a] == self.byteEoP[0] and payload[a+1] == self.byteEoP[1] and payload[a+2] == self.byteEoP[2] and payload[a+3] == self.byteEoP[3]:
 
@@ -89,20 +89,22 @@ class Client():
         
         self.txLenStuff = len(payload)
 
-        print(len(payload))
-
         self.makeHeader()
             
         qt = self.fatia()
 
+        payload = payload + self.byteEoP
+
+        print(payload)
+
         b = 0
-        p = qt
+        p = qt 
 
         packs = []
 
         while b <= len(payload):
 
-            payload[b:b] = self.qPck 
+            payload[b:b] = self.qPck
             b+=2
 
             payload[b:b] = (qt-p).to_bytes(2, byteorder='little')
@@ -112,14 +114,17 @@ class Client():
             payload[b:b] = self.head
             b += 136
 
-            payload[b:b] = bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
+            # if b <= len(payload):
+                
+            payload[b:b] = self.byteEoP
             b += 4
 
             packs.append(payload[b-144: b])
+
+            # else:
+            #     break
         
         packs.append(payload[b:])
-
-        packs[-1] = packs[-1] + self.byteEoP
 
         return packs
 
@@ -127,18 +132,13 @@ class Client():
 
         tamanho_do_payload = self.txLenStuff
 
-        print(tamanho_do_payload)
-
         sobra = tamanho_do_payload%128
 
         a = tamanho_do_payload - sobra
 
-        qPack = int(a/128)
+        qPack = int(a/128) + 1
 
-        print(sobra)
-        print(qPack)
-
-        self.qPck = (qPack + 1).to_bytes(2, byteorder='little')
+        self.qPck = (qPack).to_bytes(2, byteorder='little')
 
         return qPack
 
@@ -156,7 +156,7 @@ class Client():
     def Time(self,rxLen,END,STR):
 
         dt = END-STR
-        taxa = rxLen/dt
+        taxa = int.from_bytes(self.qPck, byteorder='little')/dt
 
         print("Time: {}".format(dt))
         print("Taxa: {}".format(taxa)) 
