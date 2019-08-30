@@ -153,60 +153,182 @@ elif typ == "1":
     A=bytes(bytearray())
     A = bytes("CRRT", 'utf-8')
     print ("Aguardando informações...")
-    print (A)
     server = Server()
+    ocioso = True
 
-    while(com.tx.getIsBussy()):
-        pass
-
-    tamanho = com.rx.getNData(4)
-    tip = com.rx.getNData(1)
-    stuffedQuant = com.rx.getNData(1)
-    resposta_tamanho = com.rx.getNData(1)
-    resposta_EOP = com.rx.getNData(1)
+    #############################
+    #  Definindo EOP + Stuffed  #
+    #############################
     EOP = bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
     stuffed = bytes({0x00}) + bytes({0xF0}) + bytes({0x00}) + bytes({0xF1}) + bytes({0x00}) + bytes({0xF2}) + bytes({0x00}) + bytes({0xF3})
 
+
+    ###############################
+    #  Respostas dadas ao Client  #
+    ###############################
+    m2INT = 2
+    m2 = m2INT.to_bytes(1,byteorder='little')
+    m4INT = 4
+    m4 = m4INT.to_bytes(1,byteorder='little')
+    m5INT = 5
+    m5 = m5INT.to_bytes(1,byteorder='little')
+    m6INT = 6
+    m6 = m6INT.to_bytes(1,byteorder='little')
+
+    ####################
+    #  Loop Ocioso #
+    ####################
+    while ocioso:
+        while(com.tx.getIsBussy()):
+            pass
+        QPackTotal = com.rx.getNData(2)
+        QPackTotalINT = int.from_bytes(QPackTotal, byteorder='little')
+        QPackAtual = com.rx.getNData(2)
+        QPackAtualINT = int.from_bytes(QPackAtual, byteorder='little') + 1
+        tamanho = com.rx.getNData(4)
+        tip = com.rx.getNData(1)
+        stuffedQuant = com.rx.getNData(1)
+        resposta_tamanho = com.rx.getNData(1)
+        resposta_EOP = com.rx.getNData(1)
+        m1 = com.rx.getNData(1)
+        m1INT = int.from_bytes(m1, byteorder='little')
+        EOP_recebido = com.rx.getNData(4)
+        ######################################################
+        #  Recebendo mensagem para deixar de ser ocioso--M1  #
+        ######################################################
+        if EOP_recebido == EOP:
+            if m1INT == 1:
+                ocioso = False
+        time.sleep(0.1)
+
     print("-------------------------")
-    print("PEGUEI AS INFORMAÇÕES")
+    print("PEGUEI AS INFORMAÇÕES DO HEAD")
 
-    #Tamanho do arquivo + StuffedLen
-    rxLen = int.from_bytes(tamanho,byteorder='little') + int.from_bytes(stuffedQuant,byteorder='little')
+    ##############################################
+    #  Mandando mensagem de servidor pronto--M2  #
+    ##############################################
+    
+    send = QPackTotal+QPackAtual+envio+tip+stuffedQuant+resposta_tamanho+resposta_EOP+m2+EOP
+    com.sendData(send)
 
-    #Pega as informações conhecendo o tamanho!  rxBuffer = rxBuffer[0: s01:] + rxBuffer[s01 + 1::]   
-    rxBuffer, nRx = com.getData(rxLen+len(EOP))
+    print("START")
+
+    while QPackAtualINT<=QPackTotalINT:
+        while(com.tx.getIsBussy()):
+            pass
+
+        timer_1 = time.time()
+        timer_2 = time.time()
+
+        QPackTotal = com.rx.getNData(2)
+        QPackTotalINT = int.from_bytes(QPackTotal, byteorder='little')
+        QPackAtual = com.rx.getNData(2)
+        QPackAtualINT = int.from_bytes(QPackAtual, byteorder='little') + 1
+        tamanho = com.rx.getNData(4)
+        tip = com.rx.getNData(1)
+        stuffedQuant = com.rx.getNData(1)
+        resposta_tamanho = com.rx.getNData(1)
+        resposta_EOP = com.rx.getNData(1)
+        m3 = com.rx.getNData(1)
+        m3INT = int.from_bytes(m3, byteorder='little')
+        tamanhoPack = int.from_bytes(tamanho,byteorder="little")
+        rxBuffer, nRx = com.getData(tamanhoPack+len(EOP))
+
+        # ##############################################
+        # #  Pega as informações conhecendo o tamanho! #
+        # ##############################################
+        # if QPackAtualINT==QPackTotalINT:
+        #     tamanhoPack = int.from_bytes(tamanho,byteorder="little")%128
+        #     rxBuffer, nRx = com.getData(tamanhoPack+len(EOP))
+        # else:
+        #     tamanhoPack = 128
+        #     rxBuffer, nRx = com.getData(tamanhoPack+len(EOP))
+
+
+        if m3INT!=3:
+            if timer_2>20:
+                ocioso = True
+                cont = 0
+                
+                stuff = cont.to_bytes(12,byteorder='little')
+
+                send = stuff+m5+EOP
+                com.sendData(send)
+                com.disable()
+                print(":-(")
+            if timer_1>2:
+                cont = 0
+                
+                stuff = cont.to_bytes(12,byteorder='little')
+
+                send = stuff+m4+EOP
+                com.sendData(send)
+                timer_1 = (time.time - timer_1)
+        else:
+            ###############################################################################
+            # Pegando o Buffer e construindo as variaveis do Head apartir do segundo Pack #
+            ###############################################################################
+            print("Quant Total: ", int.from_bytes(QPackTotal,byteorder="little"))
+            print("Quant Atual: ", int.from_bytes(QPackAtual,byteorder="little"))
+
+            
+            #####################################
+            #  Quantidade que realmente chegou  #
+            #####################################
+            tamanhoRecebido = len(rxBuffer)-4
+            envio = tamanhoRecebido.to_bytes(4, byteorder='little')
+
+            ##################
+            #  Verifica EOP  #
+            ##################
+            resposta_EOP = server.achaEOP(rxBuffer,EOP)
+
+            #############################
+            #  Verifica Tamanho Imagem  #
+            #############################
+            if tamanhoRecebido!=tamanhoPack:
+                resposta_tamanho = bytes({0x00})
+            else:
+                resposta_tamanho = bytes({0x01})
+
+            print(resposta_tamanho, "+", resposta_EOP)
+            ##################
+            #    RESPOSTA    #
+            ##################
+            if resposta_tamanho == bytes({0x01}) and resposta_EOP == bytes({0x02}):
+                send = QPackTotal+QPackAtual+envio+tip+stuffedQuant+resposta_tamanho+resposta_EOP+m4+EOP
+                com.sendData(send)
+                QPackAtualINT += 1
+            else:
+                send = QPackTotal+QPackAtual+envio+tip+stuffedQuant+resposta_tamanho+resposta_EOP+m6+EOP
+                com.sendData(send)
+        
+
 
     print("-------------------------")
     print("CHECKPOINT")
 
-    image, imageLen, resposta_EOP = server.organizeFile(rxBuffer,EOP,stuffed)
+    image, imageLen = server.organizeFile(EOP,stuffed)
 
     print("-------------------------")
     print("ORGANIZEI")
 
     tipo = server.fileType(tip)
+    print(tipo)
+    print(len(image))
 
-    #Salva o Arquivo
+    #####################
+    #  Salva o Arquivo  #
+    #####################
     with open("SaveImage"+"."+tipo,'wb+') as saved:
         saved.write(image)
 
     print("-------------------------")
     print("SALVEI")
 
-    #Quantidade que realmente chegou
-    envio = imageLen.to_bytes(4, byteorder='little')
-
-    #Verifica Tamanho Imagem
-    if imageLen!=rxLen:
-        resposta_tamanho = bytes({0x00})
-    else:
-        resposta_tamanho = bytes({0x01})
-    head = envio+tip+stuffedQuant+resposta_tamanho+resposta_EOP
-
-    #Retorna Head
-    com.sendData(head)
-
-    # Encerra comunicação
+    #########################
+    #  Encerra comunicação  #
+    #########################
     print("-------------------------")
     print("Comunicação encerrada")
     print("-------------------------")
