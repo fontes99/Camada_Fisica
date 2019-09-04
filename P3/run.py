@@ -55,23 +55,23 @@ if typ == "0":
 
     qPck = client.getqPack()
 
-    print('\nComprimento real da lista: ', len(send_list))
-
     print('\nQuant de packs: ', qPck, '\n')
 
     a = 0
 
     t0 = time.time()
 
+    client.printProgressBar(0, qPck, prefix = 'Transferindo pacotes:', suffix = 'Completo', length = 70)
+
     while a < qPck:
+
+        client.printProgressBar(a + 1, qPck, prefix = 'Transferindo pacotes:', suffix = 'Completo', length = 70)
 
         # Envio pack por pack
         com.sendData(send_list[a])
-        print(send_list[a])
 
         # Atualiza dados da transmissão
         txSize = com.tx.getStatus()
-        print ("Transmitido {}/{} packs".format(a+1, qPck))
 
         #========================================#
         #                Resposta                #
@@ -91,38 +91,17 @@ if typ == "0":
 
         erroEoP = rxHead[-5]
 
-        print("*********************************************")
-        print('            PACOTE {} DE {}                '.format(a+1, qPck))
-        print("*********************************************")
-
         if compTamanho == 0:
-            print("---------------------------------------------")
-            print("[ERRO] Tamanho recebido diferente do enviado")
-
-        elif compTamanho == 1:
-            print("---------------------------------------------")
-            print("Nenhum erro encontrado no payload")
-
+            print("\n[ERRO] Tamanho recebido diferente do enviado no pacote {}". format(a))
 
         if erroEoP == 0:
-            print("---------------------------------------------")
-            print("EOP não Encontrado...")
-            print("---------------------------------------------")
+            print("\n[ERRO] EOP não Encontrado no pacote {}". format(a))
         
         elif erroEoP == 1:
-            print("---------------------------------------------")
-            print("EOP encontrado em um local errado...")
-            print("---------------------------------------------")
-            
-        elif erroEoP == 2:
-            print("---------------------------------------------")
-            print("Nenhum erro encontrado no EoP")
-        
+            print("\n[ERRO] EOP encontrado em um local errado no pacote {}". format(a))                    
 
         if erroEoP == 2 and compTamanho == 1:
             a += 1
-        
-        print("\n ----- CONCLUIDO ----- \n")
 
     t1 = time.time()
 
