@@ -13,13 +13,44 @@ class Client():
         self.type = None
         self.quantStuff = None
         self.qPck = None
-        self.head = None
         self.txLenStuff = None
+        self.destino = None
+
+        self.identificador = (123).to_bytes(1, byteorder='little')
+
         self.byteEoP = bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
 
-    
+    def printProgressBar (self, iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
+        """
+        Call in a loop to create terminal progress bar
+        @params:
+            iteration   - Required  : current iteration (Int)
+            total       - Required  : total iterations (Int)
+            prefix      - Optional  : prefix string (Str)
+            suffix      - Optional  : suffix string (Str)
+            decimals    - Optional  : positive number of decimals in percent complete (Int)
+            length      - Optional  : character length of bar (Int)
+            fill        - Optional  : bar fill character (Str)
+        """
+        percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+        filledLength = int(length * iteration // total)
+        bar = fill * filledLength + '-' * (length - filledLength)
+        print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = '\r')
+        # Print New Line on Complete
+        if iteration == total: 
+            print()
+
+    def getLen(self):
+        return self.txLen
+
+    def setDestino(self, destino):
+        self.destino = destino.to_bytes(1, byteorder='little')
+
     def getqPack(self):
         return int.from_bytes(self.qPck, byteorder='little')
+    
+    def getIdentificador(self):
+        return self.identificador
 
     def GetFileAndSize(self):
 
@@ -38,11 +69,9 @@ class Client():
 
         return self.txBuffer, self.txLen, fileType
 
+    def makeHeader(self, tipo, pckAtual=0):
 
-    def makeHeader(self):
-
-        img_size = self.txLen.to_bytes(4, byteorder='little')
-
+        msg_size = self.txLen.to_bytes(4, byteorder='little')
 
         if  self.fileType.lower() == 'png':
             img_typ =  bytes({0x00})
@@ -55,14 +84,12 @@ class Client():
     
             
         quantStuff = self.quantStuff.to_bytes(1, byteorder='little')
-
-        resposta_EoP = bytes({0x00})
-
-        respPayload = bytes({0x00})
         
-        head = img_size + img_typ + quantStuff + respPayload + resposta_EoP
+        pacote_atual = pckAtual.to_bytes(2, byteorder='little')
 
-        self.head = head
+        head = tipo.to_bytes(1, byteorder='little') + self.destino + self.qPck + pacote_atual + msg_size + img_typ + quantStuff
+
+        return head
 
     def fatiamento(self):
 
@@ -88,14 +115,10 @@ class Client():
         self.quantStuff = len(stuffedIdx)
         
         self.txLenStuff = len(payload)
-
-        self.makeHeader()
             
         qt = self.fatia()
 
         payload = payload + self.byteEoP
-
-        print(payload)
 
         b = 0
         p = qt 
@@ -104,25 +127,14 @@ class Client():
 
         while b <= len(payload):
 
-            payload[b:b] = self.qPck
-            b+=2
-
-            payload[b:b] = (qt-p).to_bytes(2, byteorder='little')
+            payload[b:b] = self.makeHeader(3, (qt-p))
             p -= 1
-            b += 2
-
-            payload[b:b] = self.head
-            b += 136
-
-            # if b <= len(payload):
+            b += 140
                 
             payload[b:b] = self.byteEoP
             b += 4
 
             packs.append(payload[b-144: b])
-
-            # else:
-            #     break
         
         packs.append(payload[b:])
 
@@ -148,7 +160,6 @@ class Client():
         pack_list = self.fatiamento()
 
         # Transmite dado
-        print("tentado transmitir .... {} bytes".format(self.txLen))
 
         return pack_list
 
@@ -160,26 +171,36 @@ class Client():
 
         print("Time: {}".format(dt))
         print("Taxa: {}".format(taxa)) 
-
-
     
-#========================#=======================#=========================
+    def makeType1(self):
+        
+        head = self.makeHeader(1)
 
-# PROTOCOLO HEADER:
-# Num de Pacotes (2 bytes) + Pacote atual + Tamanho da imagem (4 bytes) + extenção da imagem (1 byte) + Quantidade de stuffeds q forem feitos (1 byte) + checagem do tamanho (1 byte) + resposta (1 byte)
+        send = head + self.byteEoP
 
-# RESPOSTA:
-# 0x02 = tudo OK
+        return send
 
-# DICIONARIO DE EXTENÇÃO:
-# .png = bytes({0x00})
-# .jpg = bytes({0x01})
-# .jpeg = bytes({0x02})
+        
 
-# DICIONARIO DE RESPOSTAS
 
-# 0x00 = EOP não Encontrado
-# 0x01 = EOP encontrado em um local errado...
-# 0x02 = Sem erros
+'''    
+========================#=======================#=========================
 
-#========================#=======================#=========================
+NUMERO DE IDENTIFICAÇÃO: 123
+
+PROTOCOLO HEADER (12 bytes): 0'0'00'00'0000'0'0
+Tipo (1 byte) + 
+Destinatário (1 byte) +
+Num de Pacotes (2 bytes) + 
+Pacote atual (2 bytes) + 
+Tamanho da imagem (4 bytes) + 
+extenção da imagem (1 byte) + 
+Quantidade de stuffeds q foram feitos (1 byte)
+
+DICIONARIO DE EXTENÇÃO:
+.png = bytes({0x00})
+.jpg = bytes({0x01})
+.jpeg = bytes({0x02})
+
+========================#=======================#=========================
+'''

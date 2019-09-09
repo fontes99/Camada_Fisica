@@ -61,11 +61,11 @@ if typ == "0":
 
     t0 = time.time()
 
-    client.printProgressBar(0, qPck, prefix = 'Transferindo pacotes:', suffix = 'Completo', length = 70)
+    client.printProgressBar(0, qPck, prefix = 'Transferindo pacotes {}/{}:'.format(a+1, qPck), suffix = 'Completo', length = 70)
 
     while a < qPck:
 
-        client.printProgressBar(a + 1, qPck, prefix = 'Transferindo pacotes:', suffix = 'Completo', length = 70)
+        client.printProgressBar(a + 1, qPck, prefix = 'Transferindo pacotes {}/{}:'.format(a+1, qPck), suffix = 'Completo', length = 70)
 
         # Envio pack por pack
         com.sendData(send_list[a])
