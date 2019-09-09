@@ -136,7 +136,7 @@ if typ == "0":
             print('TRUEPUT:')
             client.Time(rxLen-12, t1, t0)
         
-        else:
+        if timeout > 20:
 
             print("---------------------------------------------")
             print("         [ERRO] TIMEOUT DE CONEXÃO           ")
