@@ -98,9 +98,14 @@ class RX(object):
         This function blocks until the number of bytes is received
         """
 
+        t = time.time()
+        tf = t + 2
         while(self.getBufferLen() < size):
             time.sleep(0.001)
-#                 
+
+            if time.time() > tf:
+                return (-1)             
+            
         return(self.getBuffer(size))
 
 

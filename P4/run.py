@@ -5,9 +5,12 @@ from client import *
 from enlace import *
 from server import *
 
-# Serial Com Port
-#   para saber a sua porta, execute no terminal :
-#   python -m serial.tools.list_ports
+'''
+    Serial Com Port
+        para saber a sua porta, execute no terminal :
+        python -m serial.tools.list_ports
+
+'''
 
 def getPort():
 
@@ -47,6 +50,11 @@ if typ == "0":
 
     client = Client()
 
+    # Pede destinatario
+    destino = int(input('Qual o destinatario? (0-255): '))
+
+    client.setDestino(destino)
+
     # Pede o Arquivo
     txBuffer, txLen, fileType = client.GetFileAndSize()
 
@@ -55,92 +63,90 @@ if typ == "0":
 
     qPck = client.getqPack()
 
-    print('\n Comprimento real da lista: ', len(send_list))
+    print('\nQuant de packs: ', qPck, '\n')
 
-    print('\n Quant de packs: ', qPck, '\n')
+    # Manda tipo 1 e espera tipo 2
 
-    a = 0
+    com.sendData(client.makeType1())
 
-    t0 = time.time()
+    tam = client.getLen()
+    print('Requisitando conexção. Envio de {} bytes.'.format(tam))
 
-    while a < qPck:
+    time.sleep(0.5)
 
-        # Envio pack por pack
-        com.sendData(send_list[a])
-        print(send_list[a])
-
-        # Atualiza dados da transmissão
-        txSize = com.tx.getStatus()
-        print ("Transmitido {}/{} packs".format(a+1, qPck))
-
-        #========================================#
-        #                Resposta                #
-        #========================================#
-
-        # Espera as infos
-        while(com.tx.getIsBussy()):
-            pass
-        
-
-        #Recebe Resposta  
-        rxHead = com.rx.getNData(16)
-
-        rxLen = int.from_bytes(rxHead[0:4], byteorder='little')
-
-        compTamanho = rxHead[-6]
-
-        erroEoP = rxHead[-5]
-
-        print("*********************************************")
-        print('            PACOTE {} DE {}                '.format(a+1, qPck))
-        print("*********************************************")
-
-        if compTamanho == 0:
-            print("---------------------------------------------")
-            print("[ERRO] Tamanho recebido diferente do enviado")
-
-        elif compTamanho == 1:
-            print("---------------------------------------------")
-            print("Nenhum erro encontrado no payload")
-
-
-        if erroEoP == 0:
-            print("---------------------------------------------")
-            print("EOP não Encontrado...")
-            print("---------------------------------------------")
-        
-        elif erroEoP == 1:
-            print("---------------------------------------------")
-            print("EOP encontrado em um local errado...")
-            print("---------------------------------------------")
-            
-        elif erroEoP == 2:
-            print("---------------------------------------------")
-            print("Nenhum erro encontrado no EoP")
-        
-
-        if erroEoP == 2 and compTamanho == 1:
-            a += 1
-        
-        print("\n ----- CONCLUIDO ----- \n")
-
-    t1 = time.time()
-
-    #Printa a Eficiencia
-    print("---------------------------------------------")
-    print('TAXA DE TRANSFERÊNCIA:')
-    client.Time(rxLen,t1,t0)
+    print("Esperando resposta...")
     
-    print("---------------------------------------------")
-    print('TRUEPUT:')
-    client.Time(rxLen-12, t1, t0)
+    # Recebe Resposta  
+    rxT2 = com.rx.getNData(16)
 
-    # Encerra comunicação
-    print("---------------------------------------------")
-    print("            Comunicação encerrada              ")
-    # print(clien)
-    print("---------------------------------------------")
-    com.disable()
+    # checa se chegou tipo 2 e faz o envio
+    resp = rxT2[0]
+
+    ver = rxT2[1] == client.getIdentificador()
+
+    if resp == 2:
+
+        t0 = time.time()
+        a = 0
+        timeout = 0
+
+        client.printProgressBar(0, qPck, prefix = 'Transferindo pacotes {}/{}:'.format(a+1, qPck), suffix = 'Completo', length = 30)
+
+        while a < qPck and timeout <= 20:
+
+            client.printProgressBar(a+1, qPck, prefix = 'Transferindo pacotes {}/{}:'.format(a+1, qPck), suffix = 'Completo', length = 30)
+            
+            # Envio pack por pack
+            com.sendData(send_list[a])
+
+            # Atualiza dados da transmissão
+            txSize = com.tx.getStatus()
+
+            #========================================#
+            #                Resposta                #
+            #========================================#
+            
+            # Chama a Resposta  
+            rxHead = com.rx.getNData(16)
+
+            if rxHead == -1:
+                timeout += 2
+                continue
+
+            rxLen = int.from_bytes(rxHead[6:10], byteorder='little')
+
+            tip = rxHead[0]
+
+            if tip == 6:
+                print("\n [ERRO] Pacote {} mal enviado". format(a))                  
+
+            if tip == 4:
+                timeout = 0
+                a += 1
+
+        t1 = time.time()
+
+        if timeout <= 20:
+            #Printa a Eficiencia
+            print("---------------------------------------------")
+            print('TAXA DE TRANSFERÊNCIA:')
+            client.Time(rxLen,t1,t0)
+            
+            print("---------------------------------------------")
+            print('TRUEPUT:')
+            client.Time(rxLen-12, t1, t0)
+        
+        else:
+
+            print("---------------------------------------------")
+            print("         [ERRO] TIMEOUT DE CONEXÃO           ")
+            print("---------------------------------------------")
+
+        # Encerra comunicação
+        print("---------------------------------------------")
+        print("            Comunicação encerrada            ")
+        print("---------------------------------------------")
+        com.disable()
 
 
 
