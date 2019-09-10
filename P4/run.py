@@ -6,9 +6,15 @@ from enlace import *
 from server import *
 import time
 
-# Serial Com Port
-#   para saber a sua porta, execute no terminal :
-#   python -m serial.tools.list_ports
+import subprocess
+import sys
+
+'''
+    Serial com Port
+        para saber a sua porta, execute no terminal:
+        python -m serial.tools.list_ports
+
+'''
 
 def getPortAuto():
 
@@ -35,15 +41,32 @@ def getPort():
 
     return portF
 
-serialName = getPortAuto()                      # Ubuntu (variacao de)
-# serialName = "/dev/tty.usbmodem1411"      # Mac    (variacao de)
-# serialName = "COM11"                      # Windows(variacao de)
+def getPortAuto():
+
+    port = subprocess.getoutput('python -m serial.tools.list_ports')
+    r = port.split('\n')
+    a = r[-1]
+    b = a.strip()
+    return b
+
+
+serialName = getPortAuto()                      # Ubuntu 
+# serialName = "/dev/tty.usbmodem1411"          # Mac    
+# serialName = "COM11"                          # Windows
 
 # Inicializa enlace ... variavel com possui todos os metodos e propriedades do enlace, que funciona em threading
 com = enlace(serialName) # repare que o metodo construtor recebe um string (nome)
 # Ativa comunicacao
-com.enable()
 
+if serialName == 'no ports found':
+    print('Nenhuma porta encontrada...')
+
+try:
+    com.enable()
+except:
+    print('-------Impossível conectar-------')
+    sys.exit()
+    
 # Log
 print("-------------------------")
 print("Comunicacao inicializada")
@@ -52,9 +75,26 @@ print("-------------------------")
 
 typ = input("Escolha Client(0) ou Server(1): ")
 
+while typ != "0" and typ != "1":
+    print('Resposta inválida...')
+    typ = input("Escolha Client(0) ou Server(1): ")
+
 if typ == "0":
 
     client = Client()
+
+    # Pede destinatario
+    destino = int(input('Qual o destinatario? (0-255): '))
+
+    if destino < 0 or destino > 255:
+
+        while destino < 0 or destino > 255:
+
+            print('Destinatario invalido...')
+            destino = int(input('Qual o destinatario? (0-255): '))
+
+
+    client.setDestino(destino)
 
     # Pede o Arquivo
     txBuffer, txLen, fileType = client.GetFileAndSize()
@@ -64,92 +104,104 @@ if typ == "0":
 
     qPck = client.getqPack()
 
-    print('\n Comprimento real da lista: ', len(send_list))
+    print('\nQuant de packs: ', qPck, '\n')
 
-    print('\n Quant de packs: ', qPck, '\n')
+    # Manda tipo 1 e espera tipo 2
 
-    a = 0
+    com.sendData(client.makeType1())
 
-    t0 = time.time()
+    tam = client.getLen()
+    print('Requisitando conexção. Envio de {} bytes.'.format(tam))
 
-    while a < qPck:
+    time.sleep(0.5)
 
-        # Envio pack por pack
-        com.sendData(send_list[a])
-        print(send_list[a])
+    print("Esperando resposta...")
 
-        # Atualiza dados da transmissão
-        txSize = com.tx.getStatus()
-        print ("Transmitido {}/{} packs".format(a+1, qPck))
+    resp2 = 0
+    while resp2 <= 10:
+        # Chama Resposta  
+        rxT2 = com.rx.getNData(16)
 
-        #========================================#
-        #                Resposta                #
-        #========================================#
+        if rxT2 == -1 and resp2 <= 10:   
+            resp2 += 1
+            print('tentando denovo... tentativa {}/10\r'.format(resp2), end='\r')
+        else:
+            break
 
-        # Espera as infos
-        while(com.tx.getIsBussy()):
-            pass
-        
+    # checa se chegou tipo 2 e faz o envio
+    try:
+        resp = rxT2[0]
+    except:
+        print("---------------------------------------------")
+        print("         [ERRO] TIMEOUT DE EXECUÇÃO          ")
+        print("---------------------------------------------")
+        sys.exit()
 
-        #Recebe Resposta  
-        rxHead = com.rx.getNData(16)
+    ver = rxT2[1] == client.getIdentificador()
 
-        rxLen = int.from_bytes(rxHead[0:4], byteorder='little')
+    if resp == 2:
 
-        compTamanho = rxHead[-6]
+        t0 = time.time()
+        a = 0
+        timeout = 0
 
-        erroEoP = rxHead[-5]
+        client.printProgressBar(0, qPck, prefix = 'Transferindo pacotes {}/{}:'.format(a+1, qPck), suffix = 'Completo', length = 30)
 
-        print("*********************************************")
-        print('            PACOTE {} DE {}                '.format(a+1, qPck))
-        print("*********************************************")
+        while a < qPck and timeout <= 20:
 
-        if compTamanho == 0:
-            print("---------------------------------------------")
-            print("[ERRO] Tamanho recebido diferente do enviado")
-
-        elif compTamanho == 1:
-            print("---------------------------------------------")
-            print("Nenhum erro encontrado no payload")
-
-
-        if erroEoP == 0:
-            print("---------------------------------------------")
-            print("EOP não Encontrado...")
-            print("---------------------------------------------")
-        
-        elif erroEoP == 1:
-            print("---------------------------------------------")
-            print("EOP encontrado em um local errado...")
-            print("---------------------------------------------")
+            client.printProgressBar(a+1, qPck, prefix = 'Transferindo pacotes {}/{}:'.format(a+1, qPck), suffix = 'Completo', length = 30)
             
-        elif erroEoP == 2:
+            # Envio pack por pack
+            com.sendData(send_list[a])
+
+            # Atualiza dados da transmissão
+            txSize = com.tx.getStatus()
+
+            #========================================#
+            #                Resposta                #
+            #========================================#
+            
+            # Chama a Resposta  
+            rxHead = com.rx.getNData(16)
+
+            if rxHead == -1:
+                timeout += 2
+                continue
+
+            rxLen = int.from_bytes(rxHead[6:10], byteorder='little')
+
+            tip = rxHead[0]
+
+            if tip == 6:
+                print("\n [ERRO] Pacote {} mal enviado". format(a))                  
+
+            if tip == 4:
+                timeout = 0
+                a += 1
+
+        t1 = time.time()
+
+        if timeout <= 20:
+            #Printa a Eficiencia
             print("---------------------------------------------")
-            print("Nenhum erro encontrado no EoP")
+            print('TAXA DE TRANSFERÊNCIA:')
+            client.Time(rxLen,t1,t0)
+            
+            print("---------------------------------------------")
+            print('TRUEPUT:')
+            client.Time(rxLen-12, t1, t0)
         
+        if timeout > 20:
 
-        if erroEoP == 2 and compTamanho == 1:
-            a += 1
-        
-        print("\n ----- CONCLUIDO ----- \n")
+            print("---------------------------------------------")
+            print("         [ERRO] TIMEOUT DE EXECUÇÃO          ")
+            print("---------------------------------------------")
 
-    t1 = time.time()
-
-    #Printa a Eficiencia
-    print("---------------------------------------------")
-    print('TAXA DE TRANSFERÊNCIA:')
-    client.Time(rxLen,t1,t0)
-    
-    print("---------------------------------------------")
-    print('TRUEPUT:')
-    client.Time(rxLen-12, t1, t0)
-
-    # Encerra comunicação
-    print("---------------------------------------------")
-    print("            Comunicação encerrada              ")
-    # print(clien)
-    print("---------------------------------------------")
-    com.disable()
+        # Encerra comunicação
+        print("---------------------------------------------")
+        print("            Comunicação encerrada            ")
+        print("---------------------------------------------")
+        com.disable()
 
 
 
