@@ -24,23 +24,25 @@ def getPortAuto():
     b = a.strip()
     return b
 
-def getPort():
-
-    print('Qual porta esta usando?')
-    port = int(input("Numero da porta: "))
-    portF = ''
-
-    if port==0:
-        portF = "/dev/ttyACM0"
-
-    if port==1:
-        portF = "/dev/ttyACM1"
-
-    if port==2:
-        portF = "/dev/ttyACM2"
-
-    return portF
-
+def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = '\r')
+    # Print New Line on Complete
+    if iteration == total: 
+        print()
 
 serialName = getPortAuto()                      # Ubuntu 
 # serialName = "/dev/tty.usbmodem1411"          # Mac    
@@ -140,11 +142,11 @@ if typ == "0":
 
         t0 = time.time()
 
-        client.printProgressBar(0, qPck, prefix = 'Transferindo pacotes {}/{}:'.format(a+1, qPck), suffix = 'Completo', length = 30)
+        printProgressBar(0, qPck, prefix = 'Transferindo pacotes {}/{}:'.format(a+1, qPck), suffix = 'Completo', length = 30)
 
         while a < qPck and timeout <= 20:
 
-            client.printProgressBar(a+1, qPck, prefix = 'Transferindo pacotes {}/{}:'.format(a+1, qPck), suffix = 'Completo', length = 30)
+            printProgressBar(a+1, qPck, prefix = 'Transferindo pacotes {}/{}:'.format(a+1, qPck), suffix = 'Completo', length = 30)
             
             # Envio pack por pack
             com.sendData(send_list[a])
