@@ -16,6 +16,14 @@ import sys
 
 '''
 
+def getPortAuto():
+
+    port = subprocess.getoutput('python -m serial.tools.list_ports')
+    r = port.split('\n')
+    a = r[-1]
+    b = a.strip()
+    return b
+
 def getPort():
 
     print('Qual porta esta usando?')
@@ -234,8 +242,6 @@ elif typ == "1":
     #  Loop Ocioso #
     ####################
     while ocioso:
-        while(com.tx.getIsBussy()):
-            pass
         BODY = com.rx.getNData(16)
         if server.verifiError(BODY):
             continue
@@ -276,8 +282,6 @@ elif typ == "1":
     timer_2 = time.time()
 
     while QPackAtualINT<=QPackTotalINT:
-        while(com.tx.getIsBussy()):
-            pass
         
         HEAD = com.rx.getNData(16)
         if server.verifiError(HEAD):
