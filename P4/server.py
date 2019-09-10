@@ -59,7 +59,7 @@ class Server():
         return "jpeg"
 
     def verifiError(self,Bytes):
-      if int.from_bytes(Bytes,byteorder='little')==-1:
+      if Bytes==-1:
         return True
       return False
 

@@ -10,6 +10,14 @@ import time
 #   para saber a sua porta, execute no terminal :
 #   python -m serial.tools.list_ports
 
+def getPortAuto():
+
+    port = subprocess.getoutput('python -m serial.tools.list_ports')
+    r = port.split('\n')
+    a = r[-1]
+    b = a.strip()
+    return b
+
 def getPort():
 
     print('Qual porta esta usando?')
@@ -27,7 +35,7 @@ def getPort():
 
     return portF
 
-serialName = getPort()                      # Ubuntu (variacao de)
+serialName = getPortAuto()                      # Ubuntu (variacao de)
 # serialName = "/dev/tty.usbmodem1411"      # Mac    (variacao de)
 # serialName = "COM11"                      # Windows(variacao de)
 
@@ -182,8 +190,6 @@ elif typ == "1":
     #  Loop Ocioso #
     ####################
     while ocioso:
-        while(com.tx.getIsBussy()):
-            pass
         BODY = com.rx.getNData(16)
         if server.verifiError(BODY):
             continue
@@ -224,8 +230,6 @@ elif typ == "1":
     timer_2 = time.time()
 
     while QPackAtualINT<=QPackTotalINT:
-        while(com.tx.getIsBussy()):
-            pass
         
         HEAD = com.rx.getNData(16)
         if server.verifiError(HEAD):
