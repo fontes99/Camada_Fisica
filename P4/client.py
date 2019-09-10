@@ -164,13 +164,13 @@ class Client():
         return pack_list
 
 
-    def Time(self,rxLen,END,STR):
+    def Time(self,pck,END,STR):
 
-        dt = END-STR
-        taxa = int.from_bytes(self.qPck, byteorder='little')/dt
+        dt = round(END-STR, 3)
+        taxa = round(pck/dt, 3)
 
-        print("Time: {}".format(dt))
-        print("Taxa: {}".format(taxa)) 
+        print("Time: {} segundos".format(dt))
+        print("Taxa: {} pacotes por segundo".format(taxa)) 
     
     def makeType1(self):
         

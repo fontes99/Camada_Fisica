@@ -41,14 +41,6 @@ def getPort():
 
     return portF
 
-def getPortAuto():
-
-    port = subprocess.getoutput('python -m serial.tools.list_ports')
-    r = port.split('\n')
-    a = r[-1]
-    b = a.strip()
-    return b
-
 
 serialName = getPortAuto()                      # Ubuntu 
 # serialName = "/dev/tty.usbmodem1411"          # Mac    
@@ -141,9 +133,12 @@ if typ == "0":
 
     if resp == 2:
 
-        t0 = time.time()
+        print('\nConexão estabelecida!\nEnviando...\n')
+
         a = 0
         timeout = 0
+
+        t0 = time.time()
 
         client.printProgressBar(0, qPck, prefix = 'Transferindo pacotes {}/{}:'.format(a+1, qPck), suffix = 'Completo', length = 30)
 
@@ -173,7 +168,7 @@ if typ == "0":
             tip = rxHead[0]
 
             if tip == 6:
-                print("\n [ERRO] Pacote {} mal enviado". format(a))                  
+                print("\n [ERRO] Pacote {} mal enviado. Transferindo novamente...\n". format(a+1))                  
 
             if tip == 4:
                 timeout = 0
@@ -181,21 +176,21 @@ if typ == "0":
 
         t1 = time.time()
 
+        print('')
+
         if timeout <= 20:
             #Printa a Eficiencia
             print("---------------------------------------------")
             print('TAXA DE TRANSFERÊNCIA:')
-            client.Time(rxLen,t1,t0)
+            client.Time(qPck,t1,t0)
             
-            print("---------------------------------------------")
-            print('TRUEPUT:')
-            client.Time(rxLen-12, t1, t0)
+            # print("---------------------------------------------")
+            # print('TRUEPUT:')
+            # client.Time(rxLen-12, t1, t0)
         
         if timeout > 20:
-
             print("---------------------------------------------")
             print("         [ERRO] TIMEOUT DE EXECUÇÃO          ")
-            print("---------------------------------------------")
 
         # Encerra comunicação
         print("---------------------------------------------")
