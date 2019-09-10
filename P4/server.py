@@ -51,11 +51,11 @@ class Server():
 
     
     def fileType(self,tipo):
-      if tipo== bytes({0x00}):
+      if tipo== 0:
         return "png"
-      if tipo==bytes({0x01}):
+      if tipo== 1:
         return "jpg"
-      if tipo==bytes({0x02}):
+      if tipo== 2:
         return "jpeg"
 
     def verifiError(self,Bytes):

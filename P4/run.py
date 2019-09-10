@@ -241,20 +241,20 @@ elif typ == "1":
         if server.verifiError(BODY):
             continue
         m1 = BODY[0]
-        m1INT = int.from_bytes(m1, byteorder='little')
         ItsMe = BODY[1]
-        ItsMeInt = int.from_bytes(ItsMe, byteorder='little')
-        QPackTotal = BODY[2:3]
+        QPackTotal = BODY[2:4]
         QPackTotalINT = int.from_bytes(QPackTotal, byteorder='little')
-        QPackAtual = BODY[4:5]
-        QPackAtualINT = int.from_bytes(QPackAtual, byteorder='little') + 1
-        tamanho = BODY[6:9]
+        QPackAtual = BODY[4:6]
+        QPackAtualINT = int.from_bytes(QPackAtual, byteorder='little')
+        tamanho = BODY[6:10]
         tip = BODY[10]
+        tipBT = tip.to_bytes(1,byteorder='little')
         stuffedQuant = BODY[11]
-        EOP_recebido = BODY[12:15]
-        print(m1INT)
-        if m1INT == 1:
-            if ItsMeInt == 21:
+        stuffedQuantBT = stuffedQuant.to_bytes(1, byteorder='little')
+        EOP_recebido = BODY[12:16]
+        print(m1)
+        if m1 == 1:
+            if ItsMe == 21:
                 ocioso = False
         time.sleep(0.1)
         # resposta_tamanho = com.rx.getNData(1)
@@ -269,7 +269,7 @@ elif typ == "1":
     #  Mandando mensagem de servidor pronto--M2  #
     ##############################################
     
-    send = m2+ItsYouBytes+QPackTotal+QPackAtual+tamanho+tip+stuffedQuant+EOP
+    send = m2+ItsYouBytes+QPackTotal+QPackAtual+tamanho+tipBT+stuffedQuantBT+EOP
     com.sendData(send)
 
     print("START")
@@ -278,9 +278,10 @@ elif typ == "1":
 
     while QPackAtualINT<=QPackTotalINT:
         
-        HEAD = com.rx.getNData(16)
+        HEAD = com.rx.getNData(12)
         if server.verifiError(HEAD):
-            if timer_2>20:
+            time_now = time.time - timer_2
+            if time_now>20:
                 ocioso = True
                 cont = 0
                 
@@ -297,16 +298,21 @@ elif typ == "1":
 
                 send = stuff+m4+EOP
                 com.sendData(send)
+                continue
         m3 = HEAD[0]
-        m3INT = int.from_bytes(m1, byteorder='little')
+        print("m3=",m3)
+        m3BT = m3.to_bytes(1, byteorder='little')
         ItsYou = HEAD[1]
-        QPackTotal = HEAD[2:3]
+        QPackTotal = HEAD[2:4]
+        print("QPT=",QPackTotal)
         QPackTotalINT = int.from_bytes(QPackTotal, byteorder='little')
-        QPackAtual = HEAD[4:5]
+        QPackAtual = HEAD[4:6]
         QPackAtualINT = int.from_bytes(QPackAtual, byteorder='little') + 1
-        tamanho = HEAD[6:9]
+        tamanho = HEAD[6:10]
         tip = HEAD[10]
+        tipBT = tip.to_bytes(1, byteorder='little')
         stuffedQuant = HEAD[11]
+        stuffedQuantBT = stuffedQuant.to_bytes(1, byteorder='little')
         # resposta_tamanho = com.rx.getNData(1)
         # resposta_EOP = com.rx.getNData(1)
         
@@ -317,10 +323,16 @@ elif typ == "1":
         ##############################################
         if QPackAtualINT==QPackTotalINT:
             tamanhoPack = int.from_bytes(tamanho,byteorder="little")%128
-            rxBuffer, nRx = com.getData(tamanhoPack+len(EOP))
+            rxBuffer = com.rx.getNData(tamanhoPack+len(EOP))
+            print(rxBuffer)
+            if server.verifiError(rxBuffer):
+                continue
         else:
             tamanhoPack = 128
-            rxBuffer, nRx = com.getData(tamanhoPack+len(EOP))
+            rxBuffer = com.rx.getNData(tamanhoPack+len(EOP))
+            print(rxBuffer)
+            if server.verifiError(rxBuffer):
+                continue
 
         if server.verifiError(rxBuffer):
             if timer_2>20:
@@ -345,8 +357,8 @@ elif typ == "1":
             ###############################################################################
             # Pegando o Buffer e construindo as variaveis do Head apartir do segundo Pack #
             ###############################################################################
-            print("Quant Total: ", int.from_bytes(QPackTotal,byteorder="little"))
-            print("Quant Atual: ", int.from_bytes(QPackAtual,byteorder="little"))
+            print("Quant Total: ", QPackTotalINT)
+            print("Quant Atual: ", QPackAtualINT)
 
             
             #####################################
@@ -373,11 +385,11 @@ elif typ == "1":
             #    RESPOSTA    #
             ##################
             if resposta_tamanho == bytes({0x01}) and resposta_EOP == bytes({0x02}):
-                send = m4+ItsYouBytes+QPackTotal+QPackAtual+envio+tip+stuffedQuant+EOP
+                send = m4+ItsYouBytes+QPackTotal+QPackAtual+envio+tipBT+stuffedQuantBT+EOP
                 com.sendData(send)
                 QPackAtualINT += 1
             else:
-                send = m6+ItsYouBytes+QPackTotal+QPackAtual+envio+tip+stuffedQuant+EOP
+                send = m6+ItsYouBytes+QPackTotal+QPackAtual+envio+tipBT+stuffedQuantBT+EOP
                 com.sendData(send)
         
 
