@@ -278,8 +278,10 @@ elif typ == "1":
 
     timer_2 = time.time()
 
+    printProgressBar(0, QPackTotalINT, prefix = 'Transferindo pacotes {}/{}:'.format(QPackAtualINT+1, QPackTotalINT), suffix = 'Completo', length = 30)
+
     while QPackAtualINT<=QPackTotalINT:
-        
+        printProgressBar(QPackAtualINT, QPackTotalINT, prefix = 'Transferindo pacotes {}/{}:'.format(QPackAtualINT+1, QPackTotalINT), suffix = 'Completo', length = 30)
         HEAD = com.rx.getNData(12)
         if server.verifiError(HEAD):
             time_now = time.time - timer_2
@@ -302,11 +304,9 @@ elif typ == "1":
                 com.sendData(send)
                 continue
         m3 = HEAD[0]
-        print("m3=",m3)
         m3BT = m3.to_bytes(1, byteorder='little')
         ItsYou = HEAD[1]
         QPackTotal = HEAD[2:4]
-        print("QPT=",QPackTotal)
         QPackTotalINT = int.from_bytes(QPackTotal, byteorder='little')
         QPackAtual = HEAD[4:6]
         QPackAtualINT = int.from_bytes(QPackAtual, byteorder='little') + 1
@@ -326,13 +326,11 @@ elif typ == "1":
         if QPackAtualINT==QPackTotalINT:
             tamanhoPack = int.from_bytes(tamanho,byteorder="little")%128
             rxBuffer = com.rx.getNData(tamanhoPack+len(EOP))
-            print(rxBuffer)
             if server.verifiError(rxBuffer):
                 continue
         else:
             tamanhoPack = 128
             rxBuffer = com.rx.getNData(tamanhoPack+len(EOP))
-            print(rxBuffer)
             if server.verifiError(rxBuffer):
                 continue
 
@@ -359,9 +357,6 @@ elif typ == "1":
             ###############################################################################
             # Pegando o Buffer e construindo as variaveis do Head apartir do segundo Pack #
             ###############################################################################
-            print("Quant Total: ", QPackTotalINT)
-            print("Quant Atual: ", QPackAtualINT)
-
             
             #####################################
             #  Quantidade que realmente chegou  #
@@ -382,7 +377,6 @@ elif typ == "1":
             else:
                 resposta_tamanho = bytes({0x01})
 
-            print(resposta_tamanho, "+", resposta_EOP)
             ##################
             #    RESPOSTA    #
             ##################
