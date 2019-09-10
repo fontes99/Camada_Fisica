@@ -284,8 +284,9 @@ elif typ == "1":
         printProgressBar(QPackAtualINT, QPackTotalINT, prefix = 'Transferindo pacotes {}/{}:'.format(QPackAtualINT+1, QPackTotalINT), suffix = 'Completo', length = 30)
         HEAD = com.rx.getNData(12)
         if server.verifiError(HEAD):
-            time_now = time.time - timer_2
-            if time_now>20:
+            time_now = time.time()
+            time_out = time_now - timer_2
+            if time_out>=20:
                 ocioso = True
                 cont = 0
                 
@@ -295,12 +296,13 @@ elif typ == "1":
                 com.sendData(send)
                 com.disable()
                 print(":-(")
+                break
             else:
                 cont = 0
                 
-                stuff = cont.to_bytes(12,byteorder='little')
+                stuff = cont.to_bytes(11,byteorder='little')
 
-                send = stuff+m4+EOP
+                send = m4+ItsYouBytes+QPackTotal+QPackAtual+tamanho+tipBT+stuffedQuantBT+EOP
                 com.sendData(send)
                 continue
         m3 = HEAD[0]
@@ -335,7 +337,7 @@ elif typ == "1":
                 continue
 
         if server.verifiError(rxBuffer):
-            if timer_2>20:
+            if timer_2>=20:
                 ocioso = True
                 cont = 0
                 
@@ -350,10 +352,12 @@ elif typ == "1":
                 
                 stuff = cont.to_bytes(12,byteorder='little')
 
-                send = stuff+m4+EOP
+                send = m4+ItsYouBytes+QPackTotal+QPackAtual+tamanho+tipBT+stuffedQuantBT+EOP
                 com.sendData(send)
+                continue
 
         else:
+            timer_2=time.time()
             ###############################################################################
             # Pegando o Buffer e construindo as variaveis do Head apartir do segundo Pack #
             ###############################################################################
