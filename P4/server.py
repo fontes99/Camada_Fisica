@@ -58,26 +58,29 @@ class Server():
       if tipo==bytes({0x02}):
         return "jpeg"
 
-    
+    def verifiError(self,Bytes):
+      if int.from_bytes(Bytes,byteorder='little')==-1:
+        return True
+      return False
 
-#========================#=======================#=========================
+'''    
+========================#=======================#=========================
 
-# DICIONARIO DE EXTENÇÃO
+NUMERO DE IDENTIFICAÇÃO: 21
 
-# .png = bytes({0x00})
-# .jpg = bytes({0x01})
-# .jpeg = bytes({0x02})
+PROTOCOLO HEADER (12 bytes): 0'0'00'00'0000'0'0
+Tipo (1 byte) + 
+Destinatário (1 byte) +
+Num de Pacotes (2 bytes) + 
+Pacote atual (2 bytes) + 
+Tamanho da imagem (4 bytes) + 
+extenção da imagem (1 byte) + 
+Quantidade de stuffeds q foram feitos (1 byte)
 
-#========================#=======================#=========================
-      
-#========================#=======================#=========================
+DICIONARIO DE EXTENÇÃO:
+.png = bytes({0x00})
+.jpg = bytes({0x01})
+.jpeg = bytes({0x02})
 
-# DICIONARIO DE RESPOSTAS
-
-# 0x00 = EOP não Encontrado
-# 0x01 = EOP encontrado em um local errado...
-# 0x02 = Sem erros
-
-#========================#=======================#=========================
-
-      
+========================#=======================#=========================
+'''
