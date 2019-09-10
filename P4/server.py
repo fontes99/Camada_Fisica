@@ -29,8 +29,6 @@ class Server():
 
     def achaEOP(self,rxBuffer,EOP):
       self.locEOP = rxBuffer.find(EOP)
-      print("LOC:",self.locEOP)
-      print("BUFFER:",len(rxBuffer))
       #############
       # EOP ERROR #
       #############
