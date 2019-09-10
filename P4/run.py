@@ -6,9 +6,12 @@ from enlace import *
 from server import *
 import time
 
+import subprocess
+import sys
+
 '''
-    Serial Com Port
-        para saber a sua porta, execute no terminal :
+    Serial com Port
+        para saber a sua porta, execute no terminal:
         python -m serial.tools.list_ports
 
 '''
@@ -30,15 +33,32 @@ def getPort():
 
     return portF
 
-serialName = getPort()                      # Ubuntu (variacao de)
-# serialName = "/dev/tty.usbmodem1411"      # Mac    (variacao de)
-# serialName = "COM11"                      # Windows(variacao de)
+def getPortAuto():
+
+    port = subprocess.getoutput('python -m serial.tools.list_ports')
+    r = port.split('\n')
+    a = r[-1]
+    b = a.strip()
+    return b
+
+
+serialName = getPortAuto()                      # Ubuntu 
+# serialName = "/dev/tty.usbmodem1411"          # Mac    
+# serialName = "COM11"                          # Windows
 
 # Inicializa enlace ... variavel com possui todos os metodos e propriedades do enlace, que funciona em threading
 com = enlace(serialName) # repare que o metodo construtor recebe um string (nome)
 # Ativa comunicacao
-com.enable()
 
+if serialName == 'no ports found':
+    print('Nenhuma porta encontrada...')
+
+try:
+    com.enable()
+except:
+    print('-------Impossível conectar-------')
+    sys.exit()
+    
 # Log
 print("-------------------------")
 print("Comunicacao inicializada")
@@ -47,12 +67,24 @@ print("-------------------------")
 
 typ = input("Escolha Client(0) ou Server(1): ")
 
+while typ != "0" and typ != "1":
+    print('Resposta inválida...')
+    typ = input("Escolha Client(0) ou Server(1): ")
+
 if typ == "0":
 
     client = Client()
 
     # Pede destinatario
     destino = int(input('Qual o destinatario? (0-255): '))
+
+    if destino < 0 or destino > 255:
+
+        while destino < 0 or destino > 255:
+
+            print('Destinatario invalido...')
+            destino = int(input('Qual o destinatario? (0-255): '))
+
 
     client.setDestino(destino)
 
@@ -76,12 +108,26 @@ if typ == "0":
     time.sleep(0.5)
 
     print("Esperando resposta...")
-    
-    # Recebe Resposta  
-    rxT2 = com.rx.getNData(16)
+
+    resp2 = 0
+    while resp2 <= 10:
+        # Chama Resposta  
+        rxT2 = com.rx.getNData(16)
+
+        if rxT2 == -1 and resp2 <= 10:   
+            resp2 += 1
+            print('tentando denovo... tentativa {}/10\r'.format(resp2), end='\r')
+        else:
+            break
 
     # checa se chegou tipo 2 e faz o envio
-    resp = rxT2[0]
+    try:
+        resp = rxT2[0]
+    except:
+        print("---------------------------------------------")
+        print("         [ERRO] TIMEOUT DE EXECUÇÃO          ")
+        print("---------------------------------------------")
+        sys.exit()
 
     ver = rxT2[1] == client.getIdentificador()
 
@@ -140,7 +186,7 @@ if typ == "0":
         if timeout > 20:
 
             print("---------------------------------------------")
-            print("         [ERRO] TIMEOUT DE CONEXÃO           ")
+            print("         [ERRO] TIMEOUT DE EXECUÇÃO          ")
             print("---------------------------------------------")
 
         # Encerra comunicação
