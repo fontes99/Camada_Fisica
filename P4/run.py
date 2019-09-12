@@ -278,11 +278,21 @@ elif typ == "1":
 
     timer_2 = time.time()
 
-    printProgressBar(0, QPackTotalINT, prefix = 'Transferindo pacotes {}/{}:'.format(QPackAtualINT+1, QPackTotalINT), suffix = 'Completo', length = 30)
+    num_do_pacote = [0]
+
+    ErroCond = False
+
+    printProgressBar(0, QPackTotalINT, prefix = 'Transferindo pacotes {}/{}:'.format(QPackAtualINT, QPackTotalINT), suffix = 'Completo', length = 30)
 
     while QPackAtualINT<=QPackTotalINT:
-        printProgressBar(QPackAtualINT, QPackTotalINT, prefix = 'Transferindo pacotes {}/{}:'.format(QPackAtualINT+1, QPackTotalINT), suffix = 'Completo', length = 30)
+
+        printProgressBar(QPackAtualINT, QPackTotalINT, prefix = 'Transferindo pacotes {}/{}:'.format(QPackAtualINT, QPackTotalINT), suffix = 'Completo', length = 30)
+
         HEAD = com.rx.getNData(12)
+
+        #############################
+        #  Verifica se tirou o fio  #
+        #############################
         if server.verifiError(HEAD):
             time_now = time.time()
             time_out = time_now - timer_2
@@ -295,23 +305,23 @@ elif typ == "1":
                 send = stuff+m5+EOP
                 com.sendData(send)
                 com.disable()
-                print(":-(")
+                print("\n:-(\n")
+                ErroCond = True
                 break
             else:
-                cont = 0
-                
-                stuff = cont.to_bytes(11,byteorder='little')
 
                 send = m4+ItsYouBytes+QPackTotal+QPackAtual+tamanho+tipBT+stuffedQuantBT+EOP
                 com.sendData(send)
                 continue
+
+
         m3 = HEAD[0]
         m3BT = m3.to_bytes(1, byteorder='little')
         ItsYou = HEAD[1]
         QPackTotal = HEAD[2:4]
         QPackTotalINT = int.from_bytes(QPackTotal, byteorder='little')
         QPackAtual = HEAD[4:6]
-        QPackAtualINT = int.from_bytes(QPackAtual, byteorder='little') + 1
+        QPackAtualINT = int.from_bytes(QPackAtual, byteorder='little')+1
         tamanho = HEAD[6:10]
         tip = HEAD[10]
         tipBT = tip.to_bytes(1, byteorder='little')
@@ -336,7 +346,9 @@ elif typ == "1":
             if server.verifiError(rxBuffer):
                 continue
 
+
         if server.verifiError(rxBuffer):
+            print("Erro")
             if timer_2>=20:
                 ocioso = True
                 cont = 0
@@ -347,16 +359,18 @@ elif typ == "1":
                 com.sendData(send)
                 com.disable()
                 print(":-(")
+                ErroCond = True
+                break
             else:
-                cont = 0
-                
-                stuff = cont.to_bytes(12,byteorder='little')
 
                 send = m4+ItsYouBytes+QPackTotal+QPackAtual+tamanho+tipBT+stuffedQuantBT+EOP
                 com.sendData(send)
-                continue
+                continue	
 
-        else:
+
+        print(QPackAtualINT," ",num_do_pacote[-1])
+        if QPackAtualINT == num_do_pacote[-1]+1:
+            num_do_pacote.append(QPackAtualINT)
             timer_2=time.time()
             ###############################################################################
             # Pegando o Buffer e construindo as variaveis do Head apartir do segundo Pack #
@@ -392,36 +406,41 @@ elif typ == "1":
                 send = m6+ItsYouBytes+QPackTotal+QPackAtual+envio+tipBT+stuffedQuantBT+EOP
                 com.sendData(send)
         
+    print('')
+    if ErroCond:
+        print("-------------------------")
+        print("Comunicação encerrada")
+        print("-------------------------")
+        com.disable()
+    else:
+        print("-------------------------")
+        print("CHECKPOINT")
 
+        image, imageLen = server.organizeFile(EOP,stuffed)
 
-    print("-------------------------")
-    print("CHECKPOINT")
+        print("-------------------------")
+        print("ORGANIZEI")
 
-    image, imageLen = server.organizeFile(EOP,stuffed)
+        tipo = server.fileType(tip)
+        print(tipo)
+        print(len(image))
 
-    print("-------------------------")
-    print("ORGANIZEI")
+	    #####################
+	    #  Salva o Arquivo  #
+	    #####################
+        with open("SaveImage"+"."+tipo,'wb+') as saved:
+             saved.write(image)
 
-    tipo = server.fileType(tip)
-    print(tipo)
-    print(len(image))
+        print("-------------------------")
+        print("SALVEI")
 
-    #####################
-    #  Salva o Arquivo  #
-    #####################
-    with open("SaveImage"+"."+tipo,'wb+') as saved:
-        saved.write(image)
-
-    print("-------------------------")
-    print("SALVEI")
-
-    #########################
-    #  Encerra comunicação  #
-    #########################
-    print("-------------------------")
-    print("Comunicação encerrada")
-    print("-------------------------")
-    com.disable()
+	    #########################
+	    #  Encerra comunicação  #
+	    #########################
+        print("-------------------------")
+        print("Comunicação encerrada")
+        print("-------------------------")
+        com.disable()
 
 
     
