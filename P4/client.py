@@ -147,11 +147,14 @@ class Client():
 
     def Time(self,pck,END,STR):
 
-        dt = round(END-STR, 3)
-        taxa = round(pck/dt, 3)
+        dt = END-STR
+        taxa = round(pck/dt, 1)
+        taxa2 = round((pck*144)/dt, 2)
 
-        print("Time: {} segundos".format(dt))
-        print("Taxa: {} pacotes por segundo".format(taxa)) 
+        print("Time: {} segundos".format(round(dt, 3)))
+        print("Taxa: {} pacotes por segundo".format(taxa))
+        print("Taxa: {} bytes por segundo".format(taxa2))
+
     
     def makeType1(self):
         
