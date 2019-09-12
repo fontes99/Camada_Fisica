@@ -151,9 +151,6 @@ if typ == "0":
             # Envio pack por pack
             com.sendData(send_list[a])
 
-            # Atualiza dados da transmissão
-            txSize = com.tx.getStatus()
-
             #========================================#
             #                Resposta                #
             #========================================#
@@ -163,18 +160,21 @@ if typ == "0":
 
             if rxHead == -1:
                 timeout += 2
+                print('\nRemandando pacote {}...\n'.format(a+1))
                 continue
 
             rxLen = int.from_bytes(rxHead[6:10], byteorder='little')
 
             tip = rxHead[0]
+            pacAtual = int.from_bytes(rxHead[4:6], byteorder='little')
 
             if tip == 6:
-                print("\n [ERRO] Pacote {} mal enviado. Transferindo novamente...\n". format(a+1))                  
+                print("\n [ERRO] Pacote {} mal enviado. Transferindo novamente...\n". format(a+1))  
+                continue                
 
             if tip == 4:
                 timeout = 0
-                a += 1
+                a = pacAtual+1
 
         t1 = time.time()
 
