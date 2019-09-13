@@ -367,8 +367,6 @@ elif typ == "1":
                 com.sendData(send)
                 continue	
 
-
-        print(QPackAtualINT," ",num_do_pacote[-1])
         if QPackAtualINT == num_do_pacote[-1]+1:
             num_do_pacote.append(QPackAtualINT)
             timer_2=time.time()
