@@ -51,7 +51,7 @@ class Client():
 
         return self.txBuffer, self.txLen, fileType
 
-    def makeHeader(self, tipo, pckAtual=0, payloadCRC=b'\0x00\0x00'):
+    def makeHeader(self, tipo, pckAtual=0, payloadCRC=b'\0x00\0x01'):
 
         msg_size = self.txLen.to_bytes(4, byteorder='little')
 
@@ -64,13 +64,15 @@ class Client():
         elif  self.fileType.lower() == 'jpeg':
             img_typ =  b'\0x02'
 
-        CRC = CRC16().calculate(payloadCRC).to_bytes(2, byteorder='little')
+        CRC = CRC16().calculate(str(payloadCRC))
+        
+        CRC_bytes = CRC.to_bytes(2, byteorder='little')
 
         quantStuff = self.quantStuff.to_bytes(1, byteorder='little')
         
         pacote_atual = pckAtual.to_bytes(2, byteorder='little')
 
-        head = tipo.to_bytes(1, byteorder='little') + self.destino + self.qPck + pacote_atual + msg_size + img_typ + quantStuff + CRC
+        head = tipo.to_bytes(1, byteorder='little') + self.destino + self.qPck + pacote_atual + msg_size + img_typ + quantStuff + CRC_bytes
 
         return head
 
@@ -110,7 +112,12 @@ class Client():
 
         while b <= len(payload):
 
-            payload[b:b] = self.makeHeader(3, (qt-p), payload[b:])
+            head = self.makeHeader(3, (qt-p), payload[b:b+128])
+            payload[b:b] = head
+
+            print(head)
+            print(len(head))
+
             p -= 1
             b += 142
                 
