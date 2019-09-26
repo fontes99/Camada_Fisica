@@ -5,8 +5,6 @@ from enlace import *
 from tkinter import filedialog,Tk
 import time
 
-from PyCRC.CRC16 import CRC16
-
 class Client():
 
     def __init__(self):
@@ -20,7 +18,8 @@ class Client():
 
         self.identificador = (123).to_bytes(1, byteorder='little')
 
-        self.byteEoP = b'\0xF0\0xF1\0xF2\0xF3'
+        self.byteEoP = bytes({0xF0}) + bytes({0xF1}) + bytes({0xF2}) + bytes({0xF3})
+
 
     def getLen(self):
         return self.txLen
@@ -51,28 +50,25 @@ class Client():
 
         return self.txBuffer, self.txLen, fileType
 
-    def makeHeader(self, tipo, pckAtual=0, payloadCRC=b'\0x00\0x01'):
+    def makeHeader(self, tipo, pckAtual=0):
 
         msg_size = self.txLen.to_bytes(4, byteorder='little')
 
         if  self.fileType.lower() == 'png':
-            img_typ =  b'\0x00'
+            img_typ =  bytes({0x00})
 
         elif  self.fileType.lower() == 'jpg':
-            img_typ =  b'\0x01'
+            img_typ =  bytes({0x01})
 
         elif  self.fileType.lower() == 'jpeg':
-            img_typ =  b'\0x02'
-
-        CRC = CRC16().calculate(str(payloadCRC))
-        
-        CRC_bytes = CRC.to_bytes(2, byteorder='little')
-
+            img_typ =  bytes({0x02})
+    
+            
         quantStuff = self.quantStuff.to_bytes(1, byteorder='little')
         
         pacote_atual = pckAtual.to_bytes(2, byteorder='little')
 
-        head = tipo.to_bytes(1, byteorder='little') + self.destino + self.qPck + pacote_atual + msg_size + img_typ + quantStuff + CRC_bytes
+        head = tipo.to_bytes(1, byteorder='little') + self.destino + self.qPck + pacote_atual + msg_size + img_typ + quantStuff
 
         return head
 
@@ -88,10 +84,10 @@ class Client():
 
             if payload[a] == self.byteEoP[0] and payload[a+1] == self.byteEoP[1] and payload[a+2] == self.byteEoP[2] and payload[a+3] == self.byteEoP[3]:
 
-                payload[a:a]     = b'\0x00'
-                payload[a+1:a+1] = b'\0x00'
-                payload[a+2:a+2] = b'\0x00'
-                payload[a+3:a+3] = b'\0x00'
+                payload[a:a]     = bytes({0x00})
+                payload[a+1:a+1] = bytes({0x00})
+                payload[a+2:a+2] = bytes({0x00})
+                payload[a+3:a+3] = bytes({0x00})
                 
                 stuffedIdx.append(a)
 
@@ -112,19 +108,14 @@ class Client():
 
         while b <= len(payload):
 
-            head = self.makeHeader(3, (qt-p), payload[b:b+128])
-            payload[b:b] = head
-
-            print(head)
-            print(len(head))
-
+            payload[b:b] = self.makeHeader(3, (qt-p))
             p -= 1
-            b += 142
+            b += 140
                 
             payload[b:b] = self.byteEoP
             b += 4
 
-            packs.append(payload[b-146: b])
+            packs.append(payload[b-144: b])
         
         packs.append(payload[b:])
 
@@ -148,6 +139,8 @@ class Client():
     def Organize(self):
 
         pack_list = self.fatiamento()
+
+        # Transmite dado
 
         return pack_list
 
@@ -179,20 +172,19 @@ class Client():
 
 NUMERO DE IDENTIFICAÇÃO: 123
 
-PROTOCOLO HEADER (14 bytes): 0'0'00'00'0000'0'0'00
+PROTOCOLO HEADER (12 bytes): 0'0'00'00'0000'0'0
 Tipo (1 byte) + 
 Destinatário (1 byte) +
 Num de Pacotes (2 bytes) + 
 Pacote atual (2 bytes) + 
 Tamanho da imagem (4 bytes) + 
 extenção da imagem (1 byte) + 
-Quantidade de stuffeds q foram feitos (1 byte) +
-CRC (2 bytes)
+Quantidade de stuffeds q foram feitos (1 byte)
 
 DICIONARIO DE EXTENÇÃO:
-.png = b'\0x00'
-.jpg = b'\0x01'
-.jpeg = b'\0x02'
+.png = bytes({0x00})
+.jpg = bytes({0x01})
+.jpeg = bytes({0x02})
 
 ========================#=======================#=========================
 '''
