@@ -3,6 +3,7 @@
 
 from enlace import *
 import time
+from crccheck.crc import Crc16
 
 class Server():
 
@@ -61,19 +62,27 @@ class Server():
         return True
       return False
 
+    def verificaCRC(self,CRC,payload):
+      newCRC = Crc16.calc(payload)
+      if newCRC==int.from_bytes(CRC, byteorder='little'):
+        return True
+      return False
+
 '''    
 ========================#=======================#=========================
 
 NUMERO DE IDENTIFICAÇÃO: 21
 
-PROTOCOLO HEADER (12 bytes): 0'0'00'00'0000'0'0
+PROTOCOLO HEADER (12 bytes): 0'0'00'00'0'00'0'0'0
 Tipo (1 byte) + 
 Destinatário (1 byte) +
 Num de Pacotes (2 bytes) + 
 Pacote atual (2 bytes) + 
-Tamanho da imagem (4 bytes) + 
+Tamanho do payload (1 bytes) + 
+CRC (2 bytes) + 
 extenção da imagem (1 byte) + 
-Quantidade de stuffeds q foram feitos (1 byte)
+Quantidade de stuffeds q foram feitos (1 byte) +
+blank (1 byte)
 
 DICIONARIO DE EXTENÇÃO:
 .png = bytes({0x00})

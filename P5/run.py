@@ -245,6 +245,8 @@ elif typ == "1":
     m5 = m5INT.to_bytes(1,byteorder='little')
     m6INT = 6
     m6 = m6INT.to_bytes(1,byteorder='little')
+    m7INT = 7
+    m7 = m7INT.to_bytes(1,byteorder='little')
     ItsYou = 123
     ItsYouBytes = ItsYou.to_bytes(1,byteorder='little')
 
@@ -261,11 +263,15 @@ elif typ == "1":
         QPackTotalINT = int.from_bytes(QPackTotal, byteorder='little')
         QPackAtual = BODY[4:6]
         QPackAtualINT = int.from_bytes(QPackAtual, byteorder='little')
-        tamanho = BODY[6:10]
-        tip = BODY[10]
+        tamanho_do_payload = BODY[6]
+        tamanho_do_payloadBT = tamanho_do_payload.to_bytes(1, byteorder='little')
+        CRC = BODY[7:9]
+        tip = BODY[9]
         tipBT = tip.to_bytes(1,byteorder='little')
-        stuffedQuant = BODY[11]
+        stuffedQuant = BODY[10]
         stuffedQuantBT = stuffedQuant.to_bytes(1, byteorder='little')
+        zero = BODY[11]
+        zeroBT = zero.to_bytes(1, byteorder='little')
         EOP_recebido = BODY[12:16]
         print(m1)
         if m1 == 1:
@@ -284,9 +290,9 @@ elif typ == "1":
     #  Mandando mensagem de servidor pronto--M2  #
     ##############################################
     
-    send = m2+ItsYouBytes+QPackTotal+QPackAtual+tamanho+tipBT+stuffedQuantBT+EOP
+    send = m2+ItsYouBytes+QPackTotal+QPackAtual+tamanho_do_payloadBT+CRC+tipBT+stuffedQuantBT+zeroBT+EOP
     com.sendData(send)
-
+    print(send)
     print("START")
 
     timer_2 = time.time()
@@ -294,6 +300,8 @@ elif typ == "1":
     num_do_pacote = [0]
 
     ErroCond = False
+
+    LastPack = False
 
     printProgressBar(0, QPackTotalINT, prefix = 'Transferindo pacotes {}/{}:'.format(QPackAtualINT, QPackTotalINT), suffix = 'Completo', length = 30)
 
@@ -303,27 +311,29 @@ elif typ == "1":
 
         HEAD = com.rx.getNData(12)
 
+
         #############################
         #  Verifica se tirou o fio  #
         #############################
         if server.verifiError(HEAD):
             time_now = time.time()
             time_out = time_now - timer_2
+            LastPack = True
             if time_out>=20:
                 ocioso = True
                 cont = 0
                 
-                stuff = cont.to_bytes(12,byteorder='little')
+                stuff = cont.to_bytes(11,byteorder='little')
 
-                send = stuff+m5+EOP
+                send = m5+stuff+EOP
                 com.sendData(send)
                 com.disable()
                 print("\n:-(\n")
                 ErroCond = True
                 break
             else:
-
-                send = m4+ItsYouBytes+QPackTotal+QPackAtual+tamanho+tipBT+stuffedQuantBT+EOP
+                # QPackAtualANT = QPackAtualINT
+                send = m4+ItsYouBytes+QPackTotal+QPackAtual+tamanho_do_payloadBT+CRC+tipBT+stuffedQuantBT+EOP
                 com.sendData(send)
                 continue
 
@@ -335,11 +345,17 @@ elif typ == "1":
         QPackTotalINT = int.from_bytes(QPackTotal, byteorder='little')
         QPackAtual = HEAD[4:6]
         QPackAtualINT = int.from_bytes(QPackAtual, byteorder='little')+1
-        tamanho = HEAD[6:10]
-        tip = HEAD[10]
+        tamanho_do_payload = HEAD[6]
+        tamanho_do_payloadBT = tamanho_do_payload.to_bytes(1, byteorder='little')
+        CRC = HEAD[7:9]
+        tip = HEAD[9]
         tipBT = tip.to_bytes(1, byteorder='little')
-        stuffedQuant = HEAD[11]
+        stuffedQuant = HEAD[10]
         stuffedQuantBT = stuffedQuant.to_bytes(1, byteorder='little')
+        zero = HEAD[11]
+        zeroBT = zero.to_bytes(1, byteorder='little')
+
+        
         # resposta_tamanho = com.rx.getNData(1)
         # resposta_EOP = com.rx.getNData(1)
         
@@ -348,40 +364,48 @@ elif typ == "1":
         ##############################################
         #  Pega as informações conhecendo o tamanho! #
         ##############################################
-        if QPackAtualINT==QPackTotalINT:
-            tamanhoPack = int.from_bytes(tamanho,byteorder="little")%128
-            rxBuffer = com.rx.getNData(tamanhoPack+len(EOP))
-            if server.verifiError(rxBuffer):
-                continue
-        else:
-            tamanhoPack = 128
-            rxBuffer = com.rx.getNData(tamanhoPack+len(EOP))
-            if server.verifiError(rxBuffer):
-                continue
 
+        payload = com.rx.getNData(tamanho_do_payload)
+        eopbuffer = com.rx.getNData(len(EOP))
+        
+        if payload != int and eopbuffer != int:
+            rxBuffer = payload + eopbuffer
 
-        if server.verifiError(rxBuffer):
-            print("Erro")
+        if server.verifiError(payload):
+            print("\nErro")
+            LastPack = True
             if timer_2>=20:
                 ocioso = True
                 cont = 0
                 
-                stuff = cont.to_bytes(12,byteorder='little')
+                stuff = cont.to_bytes(11,byteorder='little')
 
-                send = stuff+m5+EOP
+                send = m5+stuff+EOP
                 com.sendData(send)
                 com.disable()
                 print(":-(")
                 ErroCond = True
                 break
             else:
-
-                send = m4+ItsYouBytes+QPackTotal+QPackAtual+tamanho+tipBT+stuffedQuantBT+EOP
+                # QPackAtualANT = QPackAtualINT - 1
+                send = m4+ItsYouBytes+QPackTotal+QPackAtualINT.to_bytes(2, byteorder='little')+tamanho_do_payloadBT+CRC+tipBT+stuffedQuantBT+EOP
                 com.sendData(send)
                 continue	
 
-        if QPackAtualINT == num_do_pacote[-1]+1:
-            num_do_pacote.append(QPackAtualINT)
+        if server.verificaCRC(CRC,payload)==False:
+            send = m7+ItsYouBytes+QPackTotal+QPackAtual+tamanho_do_payloadBT+CRC+tipBT+stuffedQuantBT+zeroBT+EOP
+            com.sendData(send)
+            continue
+
+        # if LastPack:
+        #     NumPack = num_do_pacote[-2]
+        # else:
+        NumPack = num_do_pacote[-1]+1
+
+        print(num_do_pacote)
+        print("NumP",NumPack)
+        print("QPackAtual",QPackAtualINT)
+        if QPackAtualINT == NumPack:
             timer_2=time.time()
             ###############################################################################
             # Pegando o Buffer e construindo as variaveis do Head apartir do segundo Pack #
@@ -390,7 +414,7 @@ elif typ == "1":
             #####################################
             #  Quantidade que realmente chegou  #
             #####################################
-            tamanhoRecebido = len(rxBuffer)-4
+            tamanhoRecebido = len(payload)
             envio = tamanhoRecebido.to_bytes(4, byteorder='little')
 
             ##################
@@ -398,10 +422,11 @@ elif typ == "1":
             ##################
             resposta_EOP = server.achaEOP(rxBuffer,EOP)
 
+            
             #############################
             #  Verifica Tamanho Imagem  #
             #############################
-            if tamanhoRecebido!=tamanhoPack:
+            if tamanhoRecebido!=tamanho_do_payload:
                 resposta_tamanho = bytes({0x00})
             else:
                 resposta_tamanho = bytes({0x01})
@@ -410,11 +435,13 @@ elif typ == "1":
             #    RESPOSTA    #
             ##################
             if resposta_tamanho == bytes({0x01}) and resposta_EOP == bytes({0x02}):
-                send = m4+ItsYouBytes+QPackTotal+QPackAtual+envio+tipBT+stuffedQuantBT+EOP
+                send = m4+ItsYouBytes+QPackTotal+QPackAtual+tamanho_do_payloadBT+CRC+tipBT+stuffedQuantBT+zeroBT+EOP
                 com.sendData(send)
+                num_do_pacote.append(QPackAtualINT)
+                LastPack = False
                 QPackAtualINT += 1
             else:
-                send = m6+ItsYouBytes+QPackTotal+QPackAtual+envio+tipBT+stuffedQuantBT+EOP
+                send = m6+ItsYouBytes+QPackTotal+QPackAtual+tamanho_do_payloadBT+CRC+tipBT+stuffedQuantBT+zeroBT+EOP
                 com.sendData(send)
         
     print('')
