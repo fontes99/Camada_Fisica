@@ -18,7 +18,6 @@ def todB(s):
     sdB = 10*np.log10(s)
     return(sdB)
 
-
 def main():
 
     # declare um objeto da classe da sua biblioteca de apoio (cedida)
@@ -35,9 +34,11 @@ def main():
     # faca um printo na tela dizendo que a captacao comecará em n segundos. e entao
     # use um time.sleep para a espera
     for i in range(6):
-        print('A captação começará em ', i, ' segundos.         \r')
+        print('A captação começará em ', 5-i, ' segundos.         \r', end = "\r")
         time.sleep(1)
-
+    
+    print('')
+    
     # faca um print informando que a gravacao foi inicializada
     print("A gravação foi inicializada.")
 
@@ -85,6 +86,7 @@ def main():
     #         probpeaks.append(yf[i])
     # probpeaks = np.array(probpeaks)
     # print(probpeaks)
+
     index = peakutils.indexes(yf, thres=0.2, min_dist=30)
     pplot(xf, yf,index)
     axs[1].set_ylabel('Fourier/Peaks')
@@ -105,43 +107,6 @@ def main():
     # print(index)
     value = xf[index]
     print(value)
-
-    if value[0]<=710:
-        if value[1]<=1250:
-            print("1")
-        elif value[1]<=1390:
-            print("2")
-        elif value[1]<=1490:
-            print("3")
-        else:
-            print("A")
-    elif value[0]<=790:
-        if value[1]<=1250:
-            print("4")
-        elif value[1]<=1390:
-            print("5")
-        elif value[1]<=1490:
-            print("6")
-        else:
-            print("B")
-    elif value[0]<=890:
-        if value[1]<=1250:
-            print("7")
-        elif value[1]<=1390:
-            print("8")
-        elif value[1]<=1490:
-            print("9")
-        else:
-            print("C")
-    else:
-        if value[1]<=1250:
-            print("X")
-        elif value[1]<=1390:
-            print("0")
-        elif value[1]<=1490:
-            print("#")
-        else:
-            print("D")
 
     # printe os picos encontrados!
 
