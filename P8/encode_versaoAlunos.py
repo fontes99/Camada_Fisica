@@ -19,7 +19,6 @@ def main():
     print("Inicializando encoder")
 
     freqDeAmostragem = 44100
-    duration = 3
         
     signal = sig.signalMeu()
 
@@ -42,9 +41,10 @@ def main():
     print("Gerando Tom referente ao símbolo : {}".format(NUM))
     
     tone,f1,f2 = signal.makeTone(NUM)
-    dt = 0.01
+
     #solta o som
     sd.play(tone, freqDeAmostragem)
+  
     # Exibe gráficos
     fig, axs = plt.subplots(2, 1)
     axs[0].plot(f1[0][0:400], f1[1][0:400],f2[0][0:400], f2[1][0:400])

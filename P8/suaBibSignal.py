@@ -38,7 +38,7 @@ class signalMeu:
 
         freqDeAmostragem = 44100
 
-        duration = 5
+        duration = 1
 
         gainX  = 0.2
         gainY  = 0.2
@@ -47,10 +47,10 @@ class signalMeu:
         s1336 = self.generateSin(1336, gainY, duration,freqDeAmostragem)
         s1477 = self.generateSin(1477, gainY, duration,freqDeAmostragem)
         s1633 = self.generateSin(1633, gainY, duration,freqDeAmostragem)
-        s697 = self.generateSin(697, gainY, duration,freqDeAmostragem)
-        s770 = self.generateSin(770, gainY, duration,freqDeAmostragem)
-        s852 = self.generateSin(852, gainY, duration,freqDeAmostragem)
-        s941 = self.generateSin(941, gainY, duration,freqDeAmostragem)
+        s697 =  self.generateSin(697,  gainY, duration,freqDeAmostragem)
+        s770 =  self.generateSin(770,  gainY, duration,freqDeAmostragem)
+        s852 =  self.generateSin(852,  gainY, duration,freqDeAmostragem)
+        s941 =  self.generateSin(941,  gainY, duration,freqDeAmostragem)
 
         if input == '1':
             return s1209[1]+s697[1],s1209,s697

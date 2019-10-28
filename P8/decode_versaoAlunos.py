@@ -21,7 +21,6 @@ def todB(s):
 
 def main():
 
-    
     # declare um objeto da classe da sua biblioteca de apoio (cedida)
     signal = sig.signalMeu()
     # declare uma variavel com a frequencia de amostragem, sendo 44100
@@ -73,9 +72,7 @@ def main():
     axs[0].set_xlabel('time')
     axs[0].set_ylabel('Tone Recived')
     axs[0].grid(True)
-    
-    
-    
+
 
     # esta funcao analisa o fourier e encontra os picos
     # voce deve aprender a usa-la. ha como ajustar a sensibilidade, ou seja, o que é um pico?
