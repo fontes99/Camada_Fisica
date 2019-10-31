@@ -3,7 +3,8 @@
 #importe as bibliotecas
 import suaBibSignal as sig
 import numpy as np
-import sounddevice as sd
+import   sounddevice as sd
+import soundfile as sf
 import matplotlib.pyplot as plt
 import sys
 
@@ -16,51 +17,55 @@ def todB(s):
     return(sdB)
 
 def main():
+
     print("Inicializando encoder")
 
     freqDeAmostragem = 44100
         
     signal = sig.signalMeu()
+    freqDeAmostragem = 44100
+    filename = 'oi-meu-chapa.wav'
+    # Extract data and sampling rate from file
+    data, fs = sf.read(filename, dtype='float32')  
+    time = len(data)/freqDeAmostragem
+    # sd.play(data, fs)
+    # status = sd.wait()  # Wait until file is done playing
+    #######
+    data = np.array(data)
+    dataLeft = []
+    for i in range(len(data)):
+        dataLeft.append(data[i][0])
 
-    print("Gerando Tons base")
-    
-    optList =['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'X', '#', 'A', 'B', 'C', 'D']
-    NUM = None
+    dataLeft = np.array(dataLeft)
+    div = max(abs(dataLeft))
+    norm = dataLeft/max(abs(dataLeft))
 
-    print("****** TABELA *******")
-    print("*  1   2   3    A   *")
-    print("*  4   5   6    B   *")
-    print("*  7   8   9    C   *")
-    print("*  X   0   #    D   *")
-    print("*********************")
+    low_pass_normalized = signal.butter_lowpass_filter(norm,4000,freqDeAmostragem)
+    sin = signal.generateSin(7000,1,time,freqDeAmostragem)
+    signalAM = low_pass_normalized*sin[1]
+    print(sin[1])
+    sd.play(signalAM,fs)
+    status = sd.wait()
+    print(status)
 
-    
-    while NUM not in optList:
-        NUM = input('Selecione um valor da tabela: ')
 
-    print("Gerando Tom referente ao símbolo : {}".format(NUM))
-    
-    tone,f1,f2 = signal.makeTone(NUM)
+    # # Exibe gráficos
+    # fig, axs = plt.subplots(2, 1)
+    # axs[0].plot(f1[0][0:400], f1[1][0:400],f2[0][0:400], f2[1][0:400])
+    # axs[0].set_xlabel('time')
+    # axs[0].set_ylabel('f1 and f2')
+    # axs[0].grid(True)
 
-    #solta o som
-    sd.play(tone, freqDeAmostragem)
-  
-    # Exibe gráficos
-    fig, axs = plt.subplots(2, 1)
-    axs[0].plot(f1[0][0:400], f1[1][0:400],f2[0][0:400], f2[1][0:400])
-    axs[0].set_xlabel('time')
-    axs[0].set_ylabel('f1 and f2')
-    axs[0].grid(True)
 
-    axs[1].plot(f1[0][0:400], tone[0:400])
-    axs[1].set_xlabel('time')
-    axs[1].set_ylabel('Tone')
-    axs[1].grid(True)
+    # axs[1].plot(f1[0][0:400], tone[0:400])
+    # axs[1].set_xlabel('time')
+    # axs[1].set_ylabel('Tone')
+    # axs[1].grid(True)
 
-    fig.tight_layout()
-    plt.show()
-    # aguarda fim do audio
-    sd.wait()
+    # fig.tight_layout()
+    # plt.show()
+    # # aguarda fim do audio
+    # sd.wait()
 
 if __name__ == "__main__":
     main()
