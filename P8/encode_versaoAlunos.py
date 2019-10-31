@@ -17,6 +17,11 @@ def todB(s):
     return(sdB)
 
 def main():
+
+    print("Inicializando encoder")
+
+    freqDeAmostragem = 44100
+        
     signal = sig.signalMeu()
     freqDeAmostragem = 44100
     filename = 'oi-meu-chapa.wav'
@@ -50,6 +55,7 @@ def main():
     # axs[0].set_xlabel('time')
     # axs[0].set_ylabel('f1 and f2')
     # axs[0].grid(True)
+
 
     # axs[1].plot(f1[0][0:400], tone[0:400])
     # axs[1].set_xlabel('time')

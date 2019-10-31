@@ -5,6 +5,8 @@ from enlace import *
 from tkinter import filedialog,Tk
 import time
 
+from crccheck.crc import Crc16
+
 class Client():
 
     def __init__(self):
@@ -49,26 +51,32 @@ class Client():
         self.txLen = len(self.txBuffer)
 
         return self.txBuffer, self.txLen, fileType
+    
+    def calculaResto(self):
+        return self.txLen%128
 
-    def makeHeader(self, tipo, pckAtual=0):
-
-        msg_size = self.txLen.to_bytes(4, byteorder='little')
+    def makeHeader(self, tipo, tamPayload, pckAtual=0, payload=b'\x01'):
 
         if  self.fileType.lower() == 'png':
-            img_typ =  bytes({0x00})
+            img_typ = b'\x00'
 
         elif  self.fileType.lower() == 'jpg':
-            img_typ =  bytes({0x01})
+            img_typ = b'\x01'
 
         elif  self.fileType.lower() == 'jpeg':
-            img_typ =  bytes({0x02})
+            img_typ = b'\x02'
     
-            
+        CRC = Crc16.calc(payload)
+
+        CRCbytes = CRC.to_bytes(2, byteorder='little')
+
         quantStuff = self.quantStuff.to_bytes(1, byteorder='little')
         
         pacote_atual = pckAtual.to_bytes(2, byteorder='little')
 
-        head = tipo.to_bytes(1, byteorder='little') + self.destino + self.qPck + pacote_atual + msg_size + img_typ + quantStuff
+        tamPayloadBT = tamPayload.to_bytes(1, byteorder='little')
+
+        head = tipo.to_bytes(1, byteorder='little') + self.destino + self.qPck + pacote_atual + tamPayloadBT + CRCbytes + img_typ + quantStuff + b'\x00'
 
         return head
 
@@ -99,25 +107,30 @@ class Client():
             
         qt = self.fatia()
 
-        payload = payload + self.byteEoP
-
         b = 0
         p = qt 
 
         packs = []
 
-        while b <= len(payload):
+        while (qt-p) < qt:
 
-            payload[b:b] = self.makeHeader(3, (qt-p))
-            p -= 1
-            b += 140
+            if (qt-p) == qt-1:
+                resto = self.txLen%128
+                payload[b:b] = self.makeHeader(3, resto, (qt-p), payload[b:])
+                packs.append(payload[b:]+self.byteEoP)
+
+            else:
+                payload[b:b] = self.makeHeader(3, 128, (qt-p), payload[b:b+128])
+
+                b += 140               
                 
-            payload[b:b] = self.byteEoP
-            b += 4
+                payload[b:b] = self.byteEoP
+                
+                b += 4
 
-            packs.append(payload[b-144: b])
-        
-        packs.append(payload[b:])
+                packs.append(payload[b-144: b])
+
+            p -= 1
 
         return packs
 
@@ -158,7 +171,7 @@ class Client():
     
     def makeType1(self):
         
-        head = self.makeHeader(1)
+        head = self.makeHeader(1, 0)
 
         send = head + self.byteEoP
 
@@ -172,14 +185,16 @@ class Client():
 
 NUMERO DE IDENTIFICAÇÃO: 123
 
-PROTOCOLO HEADER (12 bytes): 0'0'00'00'0000'0'0
+PROTOCOLO HEADER (12 bytes): 0'0'00'00'0'00'0'0'0
 Tipo (1 byte) + 
 Destinatário (1 byte) +
 Num de Pacotes (2 bytes) + 
 Pacote atual (2 bytes) + 
-Tamanho da imagem (4 bytes) + 
+Tamanho da payload(1 bytes) + 
+CRC (2 bytes) +
 extenção da imagem (1 byte) + 
-Quantidade de stuffeds q foram feitos (1 byte)
+Quantidade de stuffeds q foram feitos (1 byte) +
+blank(1 byte)
 
 DICIONARIO DE EXTENÇÃO:
 .png = bytes({0x00})
