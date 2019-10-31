@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.fftpack import fft
 from scipy import signal as window
 import suaBibSignal as sig
+from scipy.signal import butter, lfilter, freqz
 
 
 
@@ -33,6 +34,20 @@ class signalMeu:
         plt.figure()
         plt.plot(x, np.abs(y))
         plt.title('Fourier')
+
+
+
+
+    def butter_lowpass(self,cutoff, fs, order=5):
+        nyq = 0.5 * fs
+        normal_cutoff = cutoff / nyq
+        b, a = butter(order, normal_cutoff, btype='low', analog=False)
+        return b, a
+
+    def butter_lowpass_filter(self,data, cutoff, fs, order=5):
+        b, a = self.butter_lowpass(cutoff, fs, order=order)
+        y = lfilter(b, a, data)
+        return y
     
     def makeTone(self, input):
 
